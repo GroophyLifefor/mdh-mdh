@@ -1,6 +1,7 @@
 {
   "name": "mdh-mdh",
   "private": true,
+  "packageManager": "pnpm@12.9.1",
   "version": "0.1.0",
   "description": "Miracles Don't Happen, Maybe Dreams Happen — self-hosted markdown & yaml workspaces",
   "scripts": {
