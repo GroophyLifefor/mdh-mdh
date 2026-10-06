@@ -25,8 +25,8 @@ services:
       APP_SECRET: ${APP_SECRET:?set APP_SECRET in .env (at least 32 characters)}
       PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:-}
       TRUST_PROXY: ${TRUST_PROXY:-false}
-    ports:
-      - "${PORT:-3000}:3000"
+    expose:
+      - "3000"   # no host port: a reverse proxy (Coolify, Caddy, ...) reaches it on the Docker network
 
 volumes:
   dbdata:

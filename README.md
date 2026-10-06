@@ -11,7 +11,7 @@ cp .env.example .env     # then edit: POSTGRES_PASSWORD, APP_SECRET, PUBLIC_DOMA
 docker compose up -d --build
 ```
 
-Open `http://localhost:3000` (or your `PORT`). One container serves the website and the API; PostgreSQL 18 runs in a second one with its data in the `dbdata` volume. Tables are created on start.
+Open `http://localhost:3000` (or your `PORT`). The host port comes from `docker-compose.override.yml`, which Compose reads automatically for local use; the main `docker-compose.yml` publishes no port, so a reverse proxy (Coolify, Caddy, ...) is the only way in when you deploy it. One container serves the website and the API; PostgreSQL 18 runs in a second one with its data in the `dbdata` volume. Tables are created on start.
 
 ## Settings (`.env`)
 
@@ -21,9 +21,11 @@ Open `http://localhost:3000` (or your `PORT`). One container serves the website 
 | `APP_SECRET` | yes, 32+ characters | Signs cookies and encrypts project passwords. Changing it logs everyone out and makes stored project passwords unreadable, so back it up. |
 | `PUBLIC_DOMAIN` | no | The address people use: `mdh.example.com` (https assumed) or `http://localhost:3000`. Used for the links in the Share dialog and the AI prompt. An https address also turns on Secure cookies. Without it the address in the browser tab is used. |
 | `TRUST_PROXY` | no, default `false` | Set `true` only when a reverse proxy (Caddy, nginx, Traefik) sits in front and sets `X-Forwarded-For` / `X-Forwarded-Host`. Then login limits count real client addresses. Leave `false` when the container is exposed directly: otherwise anyone could fake those headers. |
-| `PORT` | no, default `3000` | Port on the host. |
+| `PORT` | no, default `3000` | Port on the host, local use only. |
 
 ## On a real domain
+
+Coolify: point the `app` service's domain at port 3000 (`https://mdh.example.com:3000`), set `TRUST_PROXY=true`, `PUBLIC_DOMAIN`, `APP_SECRET` and `POSTGRES_PASSWORD`. Do not publish a host port.
 
 Put a reverse proxy in front for https, and set `PUBLIC_DOMAIN=mdh.example.com` and `TRUST_PROXY=true`. One domain is enough: the same process serves the site and the API. Example with Caddy:
 

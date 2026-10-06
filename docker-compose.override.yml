@@ -1,0 +1,6 @@
+# Read automatically by `docker compose up` for local use. Deployments that name only docker-compose.yml
+# (Coolify, `-f docker-compose.yml`) do not load it, so no host port is published there.
+services:
+  app:
+    ports:
+      - "${PORT:-3000}:3000"
