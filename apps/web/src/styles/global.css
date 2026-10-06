@@ -65,7 +65,7 @@ header.top .chip { height: auto; font-size: 0.8rem; margin: 0 0.2rem; }
 .chip { color: var(--muted); font-size: 0.8rem; border: 1px solid var(--border); border-radius: 66.6rem; padding: 1px 0.6667rem; margin-right: 0.4rem; }
 
 /* Dialogs */
-dialog { max-height: calc(100dvh - 2rem); overflow: auto; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 1.0667rem; padding: 1.6rem; width: min(29.3333rem, 92vw); box-shadow: var(--shadow); }
+dialog { max-height: calc(100dvh - 2rem); overflow: auto; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 1.0667rem; padding: 1.6rem; width: min(58.6667rem, 92vw); box-shadow: var(--shadow); }
 dialog::backdrop { background: rgba(10,10,14,.4); }
 dialog h2 { margin: 0 0 0.2667rem; font-size: 1.3333rem; font-weight: 650; letter-spacing: -.01em; }
 dialog .actions { display: flex; gap: 0.5333rem; justify-content: flex-end; margin-top: 1.6rem; }

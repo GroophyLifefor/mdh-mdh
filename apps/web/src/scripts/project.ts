@@ -81,7 +81,7 @@ function fail(e: unknown) {
 
 // ---------- panels: resize + show/hide ----------
 const LKEY = 'mdh_layout';
-const layout = { tree: 250, hist: 290, treeOpen: true, histOpen: false };   // the history starts closed; the choice is remembered
+const layout = { tree: 250, hist: 290, treeOpen: true, histOpen: false, histChosen: false };   // the history starts closed (open for read-only viewers); once the person toggles it, the choice is remembered
 try { Object.assign(layout, JSON.parse(localStorage.getItem(LKEY) || '{}')); } catch { /* use defaults */ }
 
 function applyLayout() {
@@ -120,7 +120,7 @@ document.querySelectorAll<HTMLElement>('.rz[data-side]').forEach((rz) => {
   };
 });
 $('toggle-tree').onclick = () => { layout.treeOpen = !layout.treeOpen; applyLayout(); saveLayout(); };
-$('toggle-hist').onclick = () => { layout.histOpen = !layout.histOpen; applyLayout(); saveLayout(); };
+$('toggle-hist').onclick = () => { layout.histOpen = !layout.histOpen; layout.histChosen = true; applyLayout(); saveLayout(); };
 
 // editor | preview divider
 const SKEY = 'mdh_split';
@@ -798,6 +798,7 @@ function setupHeader() {
   show('share-btn', isOwner());
   show('gear-btn', isOwner());
   show('tree-tools', canWrite());
+  if (!canWrite() && !layout.histChosen && !isMobile()) { layout.histOpen = true; applyLayout(); }   // viewers cannot edit: the history is what they came for
   show('profile-btn', !!user);
   if (user) $('profile-btn').innerHTML = icon('user') + `<span class="t">${esc(user.username)}</span>`;
 }

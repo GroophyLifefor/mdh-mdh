@@ -18,6 +18,7 @@ test.describe('sharing and working together', () => {
       const { scroll, client } = await page.locator(id).evaluate((e) => ({ scroll: e.scrollHeight, client: e.clientHeight }));
       expect(scroll, `${id} needs no scrolling`).toBeLessThanOrEqual(client);
     }
+    expect((await page.locator('#share-dlg').boundingBox())!.width).toBeGreaterThan(800);   // wide on a desktop
     const box = (await page.locator('#share-dlg').boundingBox())!;      // the dialog fits the window, so its buttons can be reached
     expect(box.y + box.height).toBeLessThanOrEqual(page.viewportSize()!.height);
     await page.getByRole('button', { name: 'Copy prompt' }).scrollIntoViewIfNeeded();   // reachable by scrolling the dialog
@@ -55,6 +56,8 @@ test.describe('sharing and working together', () => {
     await expect(guest.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
     await expect(guest.locator('#status')).toHaveText('read only');
     await expect(guest.locator('#tree .acts button')).toHaveCount(0);                       // no rename or delete; only the download link is there
+    await expect(guest.locator('aside.hist')).toBeVisible();                                // viewers see the history without asking for it
+    await expect(guest.locator('#history .change').first()).toBeVisible();
     await showHistory(guest);
     await guest.locator('#history .change').first().click();
     await expect(guest.getByRole('button', { name: /Rollback to/ })).toBeDisabled();
