@@ -1,0 +1,27 @@
+<dialog id="profile-dlg">
+  <h2>Profile</h2>
+  <label>Username</label>
+  <input id="pf-username" disabled />
+  <label>Theme</label>
+  <select id="pf-theme">
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+  </select>
+  <label>Size</label>
+  <select id="pf-size">
+    <option value="tiny">Tiny</option>
+    <option value="default">Default</option>
+    <option value="big">Big</option>
+  </select>
+  <label>Default rollback policy for new projects</label>
+  <select id="pf-rollback">
+    <option value="author_and_write">Owner and anyone with write access</option>
+    <option value="author_only">Owner only</option>
+  </select>
+  <div class="err" id="pf-err"></div>
+  <div class="actions">
+    <button id="pf-logout" class="danger">Log out</button>
+    <span class="spacer"></span>
+    <button id="pf-close" class="primary">Done</button>
+  </div>
+</dialog>

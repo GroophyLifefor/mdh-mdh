@@ -1,0 +1,41 @@
+change_files.change_id uuid not null
+change_files.path text not null
+change_files.kind text not null
+change_files.action text not null
+change_files.before text null
+change_files.after text null
+changes.id uuid not null default uuidv7()
+changes.project_id uuid not null
+changes.seq integer not null
+changes.actor_type text not null
+changes.actor_user_id uuid null
+changes.actor_name text not null default ''::text
+changes.kind text not null
+changes.summary text not null
+changes.target_seq integer null
+changes.created_at timestamp with time zone not null default now()
+changes.updated_at timestamp with time zone not null default now()
+nodes.project_id uuid not null
+nodes.path text not null
+nodes.kind text not null
+nodes.content text not null default ''::text
+nodes.version integer not null default 1
+nodes.updated_at timestamp with time zone not null default now()
+projects.id uuid not null default uuidv7()
+projects.owner_id uuid not null
+projects.name text not null
+projects.ro_enc text not null
+projects.rw_enc text not null
+projects.ro_hash bytea not null
+projects.rw_hash bytea not null
+projects.ro_gen integer not null default 1
+projects.rw_gen integer not null default 1
+projects.rollback_policy text not null default 'author_and_write'::text
+projects.last_seq integer not null default 0
+projects.created_at timestamp with time zone not null default now()
+projects.updated_at timestamp with time zone not null default now()
+users.id uuid not null default uuidv7()
+users.username text not null
+users.password_hash text not null
+users.default_rollback_policy text not null default 'author_and_write'::text
+users.created_at timestamp with time zone not null default now()

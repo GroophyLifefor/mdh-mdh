@@ -1,0 +1,55 @@
+# NOT RUN YET: this project is not in a git repository, so this file has never executed anywhere.
+name: ci
+on: [push, pull_request]
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      # the tests start a throw-away postgres:18 container themselves (docker is available on GitHub runners)
+      - run: pnpm --filter @mdh/server typecheck
+      - run: pnpm --filter @mdh/server lint
+      - run: pnpm --filter @mdh/server test:coverage
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @mdh/web build
+
+  smoke:
+    needs: [server, web]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env: { POSTGRES_PASSWORD: smoke }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @mdh/web build && pnpm --filter @mdh/server build
+      - name: start the server and run the curl smoke test
+        env:
+          DATABASE_URL: postgres://postgres:smoke@localhost:5432/postgres
+          APP_SECRET: ci-secret-ci-secret-ci-secret-ci-secret
+          PORT: '3100'
+          STATIC_DIR: ../web/dist
+        run: |
+          (cd apps/server && node dist/index.js &) 
+          for i in $(seq 1 30); do curl -sf localhost:3100/api/health && break; sleep 1; done
+          ./scripts/smoke.sh http://localhost:3100

@@ -1,0 +1,80 @@
+---
+import Base from '../layouts/Base.astro';
+import ProfileDialog from '../components/ProfileDialog.astro';
+---
+<Base title="mdh-mdh">
+  <header class="top">
+    <div class="crumb"><a href="/">mdh-mdh</a></div>
+    <span class="spacer"></span>
+    <button id="theme-btn" class="icon-btn"></button>
+    <button id="login-btn" class="primary hidden">Log in</button>
+    <button id="profile-btn" class="hidden outline">Profile</button>
+  </header>
+
+  <main class="page">
+    <section id="boot-err" class="banner hidden">
+      <span id="boot-err-msg"></span><span class="spacer"></span><button id="boot-retry" class="outline">Try again</button>
+    </section>
+
+    <section id="landing" class="hero hidden">
+      <h1>Miracles Don't Happen,<br />Maybe Dreams Happen</h1>
+      <p>Write markdown and yaml together. Share with a password. Roll back anything.</p>
+      <button id="landing-btn" class="primary">Get started</button>
+    </section>
+
+    <section id="projects" class="hidden">
+      <div class="proj-head"><h2>Your projects</h2><span class="spacer"></span><button id="new-btn" class="primary"><i data-icon="plus"></i>New project</button></div>
+      <input id="search" class="search hidden" type="search" placeholder="Search projects" autocomplete="off" aria-label="Search projects" />
+      <ul id="project-list" class="list"></ul>
+      <p id="empty-note" class="empty-note hidden"></p>
+      <p class="muted">Got a project link and password? Just open the link.</p>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <dialog id="auth-dlg">
+    <div class="seg">
+      <button id="tab-login" class="on">Log in</button>
+      <button id="tab-register">Register</button>
+    </div>
+    <label>Username</label>
+    <input id="au-user" autocomplete="username" />
+    <label>Password <span class="muted">(min 8 characters)</span></label>
+    <input id="au-pass" type="password" autocomplete="current-password" />
+    <div id="au-err" class="err"></div>
+    <div class="actions">
+      <button id="au-cancel">Cancel</button>
+      <button id="au-submit" class="primary">Log in</button>
+    </div>
+  </dialog>
+
+  <dialog id="new-dlg">
+    <h2>New project</h2>
+    <label>Project name</label>
+    <input id="np-name" maxlength="100" />
+    <div class="err" id="np-err"></div>
+    <div class="actions">
+      <button id="np-cancel">Cancel</button>
+      <button id="np-create" class="primary">Create</button>
+    </div>
+  </dialog>
+
+  <dialog id="del-dlg">
+    <h2>Delete this project?</h2>
+    <p>This permanently deletes <b id="del-name"></b> with all its files and its whole history. Its passwords stop working. This cannot be undone.</p>
+    <label>Type the project name to confirm</label>
+    <input id="del-input" autocomplete="off" />
+    <div class="err" id="del-err"></div>
+    <div class="actions">
+      <button id="del-cancel">Cancel</button>
+      <button id="del-go" class="danger-solid" disabled>Delete project</button>
+    </div>
+  </dialog>
+
+  <ProfileDialog />
+
+  <script>
+    import '../scripts/home';
+  </script>
+</Base>

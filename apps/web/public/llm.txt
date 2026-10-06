@@ -1,0 +1,136 @@
+# mdh-mdh: API guide for AI agents
+
+mdh-mdh is a place for markdown (.md) and yaml (.yml/.yaml) files, shared by password.
+You were given a password. It already identifies the project, so you can start right away.
+Base URL = the origin you were given (for example https://mdh.example.com). All endpoints are under /api.
+
+## 1. Authenticate
+
+Send the password with EVERY request:
+
+    Authorization: Bearer <password>
+
+- rw_...  can read and write (create, edit, rename, delete, upload, roll back)
+- ro_...  can read only. Anything that changes data answers 403 with code "read_only".
+- Optional: X-Actor-Name: <your name>. It is shown in the project history as "pw: <your name>" (max 50 characters).
+  Without it the history only says "pw". Please set it, so people can tell your changes apart.
+- Do not use cookies. Do not send the password in the URL.
+
+## 2. Start here
+
+    GET /api/access
+
+Returns what this password is:
+
+    { "project": { "id": "...", "name": "..." }, "level": "rw" | "ro", "actorName": "..." }
+
+Use project.id in every URL below. Check "level" before you try to change anything.
+
+## 3. Endpoints an agent can use
+
+All paths below start with /api/projects/<id>. Replace <id> with project.id.
+
+    GET    /api/access
+    GET    /api/projects/:id
+    GET    /api/projects/:id/tree
+    GET    /api/projects/:id/file
+    GET    /api/projects/:id/download
+    PUT    /api/projects/:id/file
+    POST   /api/projects/:id/files
+    POST   /api/projects/:id/move
+    DELETE /api/projects/:id/file
+    POST   /api/projects/:id/upload
+    GET    /api/projects/:id/history
+    GET    /api/projects/:id/history/:seq
+    POST   /api/projects/:id/history/:seq/rollback
+
+### GET /api/projects/:id
+Project info and your access: { "project": { "id", "name", "rollbackPolicy", "updatedAt" }, "access": { "level", "name" } }
+
+### GET /api/projects/:id/tree
+Every file and folder, no content, sorted by path:
+{ "nodes": [ { "path": "notes/spec.md", "kind": "file" | "dir", "version": 3, "size": 120 } ] }
+size is in bytes. Folders have size 0. Every folder is listed, including empty ones.
+
+### GET /api/projects/:id/file?path=notes/spec.md
+{ "file": { "path": "notes/spec.md", "content": "...", "version": 3, "updatedAt": "..." } }
+404 if the path is missing or is a folder. Paths are case sensitive.
+
+### GET /api/projects/:id/download
+The same files as a download. No "path": the whole project as a .zip (empty folders included).
+"?path=notes/spec.md": that file exactly as stored, as an attachment (text/markdown or text/yaml).
+"?path=notes": that folder as a .zip (it contains the folder itself, e.g. notes/spec.md). Needs only a read password.
+
+### PUT /api/projects/:id/file
+Change an existing file. Body: { "path": "notes/spec.md", "content": "new text", "baseVersion": 3 }
+baseVersion is the "version" you got when you read the file. If somebody saved in between you get 409
+"version_conflict" and nothing is written: read the file again, merge, and retry.
+Answers: { "unchanged": true, "version": 3 } when the text is identical (nothing recorded), otherwise
+{ "unchanged": false, "version": 4, "seq": 12, "merged": false }. "seq" is the history number of the change.
+Your own consecutive saves of the same file within 10 minutes share one history entry (merged: true).
+This never creates files. Use POST /files for that.
+
+### POST /api/projects/:id/files
+Create a file or a folder. Missing folders on the way are created.
+File:   { "path": "notes/new.md", "kind": "file", "content": "optional text" }
+Folder: { "path": "notes/archive", "kind": "dir" }
+201 { "change": { "id": "...", "seq": 13 } }. 409 "already_exists" if the path is taken.
+
+### POST /api/projects/:id/move
+Rename or move a file or a whole folder (everything inside moves with it). Body: { "from": "a.md", "to": "docs/a.md" }
+Missing target folders are created. 409 "already_exists" if the target exists. A folder cannot be moved into itself.
+
+### DELETE /api/projects/:id/file?path=notes/old.md
+Deletes a file, or a folder with everything in it. History keeps the content, so it can be rolled back.
+
+### POST /api/projects/:id/upload
+Many files and folders at once. ALL OR NOTHING in one transaction and ONE history entry.
+Body: { "files": [ { "path": "docs/a.md", "content": "..." } ], "folders": ["empty/dir"], "overwrite": false }
+- Missing folders are created. "folders" is only needed for folders that stay empty.
+- A file that already exists with the same content is skipped.
+- A file that exists with other content is a conflict: 409 "conflicts" with details.paths, nothing is written.
+  Send the same request with "overwrite": true to replace those files.
+- To upload a whole directory, send every file with its relative path ("my-dir/sub/file.md").
+Answers: { "created": 2, "updated": 0, "unchanged": 1, "newFolders": 1, "seq": 14 } (seq is null when nothing changed).
+
+### GET /api/projects/:id/history?limit=100&before=<seq>
+Newest first: { "changes": [ { "seq", "kind", "summary", "targetSeq", "createdAt", "updatedAt",
+"actor": { "type": "user" | "password", "name", "label" } } ], "nextBefore": <seq> | null }
+kind is edit, create, rename, delete, upload or rollback. For the next page send before=<nextBefore>. limit max 500.
+
+### GET /api/projects/:id/history/:seq
+One change with the paths it touched (no file content): { "change": { ...as above, "files": [ { "path", "kind", "action": "created" | "updated" | "deleted" } ] } }
+
+### POST /api/projects/:id/history/:seq/rollback
+Restores the whole project to how it was right after change #seq. History is never rewritten: this adds a NEW change
+(kind "rollback"), so a rollback can itself be rolled back. 409 "already_at_state" if nothing would change.
+403 "rollback_not_allowed" if the project only lets its owner roll back (a password is never the owner).
+
+## 4. Rules for files
+
+- Only .md, .yml and .yaml files (any letter case). Folder names must NOT end in .md, .yml or .yaml, also not when the folder is only part of a file path ("v1.md/a.md" is refused with invalid_path).
+- Text only (UTF-8, no NUL byte). Max 1 MB per file. Max 200 files per upload. Max 2000 files and folders and 50 MB per project.
+- Paths are relative, use / between folders, at most 20 levels. No "..", no empty parts, no backslashes,
+  no control or invisible characters, no leading or trailing spaces in a name. Unicode is stored in its composed form (NFC).
+- Names are case sensitive: README.md and readme.md are different files.
+
+## 5. Errors
+
+Every error is JSON: { "error": { "code": "...", "message": "...", "details": ... } }
+
+    400 invalid_input, invalid_path, invalid_content, too_large, bad_json   fix the request
+    401 invalid_token       the password is wrong or was refreshed. Ask the owner for the current one.
+    401 password_required   this password does not belong to that project
+    403 read_only           you have a ro_ password
+    403 rollback_not_allowed
+    404 not_found
+    409 version_conflict, already_exists, conflicts, already_at_state
+    413 project_full
+    429 too_many_requests   too many wrong passwords from your IP; wait Retry-After seconds
+
+## 6. A good way to work
+
+1. GET /api/access (remember project.id and level).
+2. GET .../tree, then GET .../file for what you need.
+3. Change files with PUT .../file (one file) or POST .../upload (many files). On 409 version_conflict read again and retry.
+4. Only change what the task needs. Everything is recorded in the history and can be rolled back by the people who own the project.

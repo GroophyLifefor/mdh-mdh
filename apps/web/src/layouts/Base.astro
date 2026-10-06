@@ -1,0 +1,18 @@
+---
+import '../styles/global.css';
+const { title = 'mdh-mdh', bodyClass = '' } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{title}</title>
+    <script is:inline>
+      try { document.documentElement.dataset.theme = localStorage.getItem('mdh_theme') || 'light'; document.documentElement.dataset.size = localStorage.getItem('mdh_size') || 'default'; } catch {}
+    </script>
+  </head>
+  <body class={bodyClass}>
+    <slot />
+  </body>
+</html>

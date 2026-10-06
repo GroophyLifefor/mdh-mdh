@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+**/.astro
+**/coverage
+**/test-results
+**/playwright-report
+**/.env
+.git
+apps/e2e/*
+docs
+!apps/e2e/package.json

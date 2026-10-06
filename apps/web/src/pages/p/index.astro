@@ -1,0 +1,126 @@
+---
+import Base from '../../layouts/Base.astro';
+import ProfileDialog from '../../components/ProfileDialog.astro';
+---
+<Base title="Project · mdh-mdh" bodyClass="one">
+  <header class="top">
+    <div class="crumb">
+      <a href="/">mdh-mdh</a><i data-icon="chevron-right" data-size="14"></i>
+      <button id="switch-btn" title="Change project"><span id="proj-name"></span><i data-icon="chevron-down" data-size="14"></i></button>
+    </div>
+    <button id="gear-btn" class="icon-btn hidden" title="Project settings"><i data-icon="gear"></i></button>
+    <span class="spacer"></span>
+    <span id="rights" class="chip"></span>
+    <button id="share-btn" class="outline hidden" aria-label="Share"><i data-icon="share"></i><span class="lbl">Share</span></button>
+    <button id="toggle-tree" class="icon-btn" title="Show/hide files"><i data-icon="panel-left"></i></button>
+    <button id="toggle-hist" class="icon-btn" title="Show/hide history"><i data-icon="panel-right"></i></button>
+    <button id="theme-btn" class="icon-btn"></button>
+    <button id="profile-btn" class="hidden outline">Profile</button>
+  </header>
+
+  <div class="work" id="work" data-tab="editor">
+    <aside class="col tree">
+      <div class="col-head">
+        <h3>Files</h3>
+        <span class="spacer"></span>
+        <a id="download-all" class="icon-btn" title="Download the whole project as a .zip" aria-label="Download project as zip" download><i data-icon="download"></i></a>
+        <span id="tree-tools" class="row" style="gap:0">
+          <button id="new-file" class="icon-btn" title="New file"><i data-icon="file-plus"></i></button>
+          <button id="new-folder" class="icon-btn" title="New folder"><i data-icon="folder-plus"></i></button>
+          <button id="collapse-all" class="icon-btn" title="Collapse all folders"><i data-icon="collapse-all"></i></button>
+          <button id="upload-btn" class="icon-btn touch-only" title="Upload files" aria-label="Upload files"><i data-icon="upload"></i></button>
+          <input id="upload-input" type="file" multiple hidden />
+        </span>
+      </div>
+      <div id="tree"></div>
+    </aside>
+    <div class="rz" data-side="tree"></div>
+
+    <section class="center">
+      <div class="bar" id="bar"></div>
+      <div class="notice hidden" id="notice"><span id="notice-msg"></span><span class="spacer"></span><span id="notice-actions" class="row"></span></div>
+      <div class="editor" id="editor">
+        <div id="cm"></div>
+        <div class="rz" id="split-rz" title="Drag to resize, double-click to reset"></div>
+        <div id="preview" class="preview hidden"></div>
+      </div>
+    </section>
+
+    <div class="rz" data-side="hist"></div>
+    <aside class="col hist">
+      <div class="col-head"><h3>History</h3></div>
+      <div id="history"></div>
+    </aside>
+  </div>
+
+  <nav id="tabbar" class="tabbar" aria-label="Sections">
+    <button data-tab="files" aria-selected="false"><i data-icon="folder"></i><span>Files</span></button>
+    <button data-tab="editor" aria-selected="true"><i data-icon="file"></i><span>Editor</span></button>
+    <button data-tab="history" aria-selected="false"><i data-icon="history"></i><span>History</span></button>
+  </nav>
+
+  <dialog id="row-menu">
+    <h2 id="rm-title"></h2>
+    <div id="rm-list"></div>
+  </dialog>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <div id="fatal" class="fatal hidden">
+    <p id="fatal-msg"></p>
+    <button id="fatal-retry" class="primary">Try again</button>
+  </div>
+
+  <dialog id="gate-dlg">
+    <h2>This project is protected</h2>
+    <p class="muted" id="gate-msg">Enter the password you were given.</p>
+    <label>Password</label>
+    <input id="gate-pw" type="password" placeholder="ro_… or rw_…" />
+    <label>Your name <span class="muted">(optional)</span></label>
+    <input id="gate-name" />
+    <div class="err" id="gate-err"></div>
+    <div class="actions"><button id="gate-go" class="primary">Open</button></div>
+  </dialog>
+
+  <dialog id="share-dlg">
+    <h2>Share this project</h2>
+    <div class="seg" style="margin-top:.8rem">
+      <button id="sh-rw" class="on">Can edit</button>
+      <button id="sh-ro">Can view</button>
+    </div>
+    <p class="muted hint" id="sh-desc"></p>
+
+    <label>URL</label>
+    <div class="pw"><input id="sh-url" readonly /><button id="sh-url-copy" class="outline"><i data-icon="copy"></i>Copy</button></div>
+
+    <label>Password</label>
+    <div class="pw"><input id="sh-pw" readonly /><button id="sh-pw-copy" class="outline"><i data-icon="copy"></i>Copy</button><button id="sh-new" class="danger" title="The old password stops working"><i data-icon="undo"></i>New</button></div>
+
+    <label>Prompt for your AI <span class="muted">— paste this to an AI agent</span></label>
+    <textarea id="sh-prompt" rows="7" readonly></textarea>
+    <div class="actions"><button id="sh-close">Close</button><button id="sh-prompt-copy" class="primary"><i data-icon="copy"></i>Copy prompt</button></div>
+  </dialog>
+
+  <dialog id="settings-dlg">
+    <h2>Project settings</h2>
+    <label>Who can undo a change?</label>
+    <select id="s-policy">
+      <option value="author_and_write">The owner and anyone who can edit</option>
+      <option value="author_only">Only the project owner</option>
+    </select>
+    <div class="actions"><button id="s-close" class="primary">Done</button></div>
+  </dialog>
+
+  <dialog id="switch-dlg">
+    <h2>Your projects</h2>
+    <ul id="switch-list" class="list"></ul>
+    <p class="muted">Got a link and password for someone else's project? Open the link.</p>
+    <div class="actions"><button id="switch-close">Close</button></div>
+  </dialog>
+
+  <ProfileDialog />
+
+  <script>
+    import '../../scripts/project';
+  </script>
+</Base>

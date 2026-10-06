@@ -1,0 +1,16 @@
+{
+  "name": "mdh-mdh",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Miracles Don't Happen, Maybe Dreams Happen — self-hosted markdown & yaml workspaces",
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter @mdh/server --filter @mdh/web dev",
+    "dev:db": "./scripts/dev-db.sh",
+    "build": "pnpm --filter @mdh/web build && pnpm --filter @mdh/server build",
+    "test": "pnpm -r --filter @mdh/server --filter @mdh/web test",
+    "typecheck": "pnpm --filter @mdh/server typecheck",
+    "lint": "pnpm --filter @mdh/server lint",
+    "smoke": "./scripts/smoke.sh",
+    "test:e2e": "pnpm build && pnpm --filter @mdh/e2e test"
+  }
+}
