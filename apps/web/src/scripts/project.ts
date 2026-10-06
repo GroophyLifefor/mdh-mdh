@@ -11,6 +11,7 @@ import { timeAgo } from '../lib/format';
 import { mergeHistory } from '../lib/history';
 import { hydrateIcons, icon } from '../lib/icons';
 import { renderMarkdown } from '../lib/markdown';
+import { renderMermaid } from '../lib/mermaid';
 import { join, nameError, parentOf } from '../lib/paths';
 import { $, copy, esc, initProfile, toast, toggleTheme } from '../lib/shared';
 import { sharePrompt } from '../lib/share';
@@ -536,6 +537,7 @@ function applyMode() {
 function renderPreview() {
   if (current === null || isYaml(current) || !view) return;
   $('preview').innerHTML = renderMarkdown(view.state.doc.toString());
+  renderMermaid($('preview'));
 }
 
 function yamlStatus() {

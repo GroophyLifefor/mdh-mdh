@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 import { renderMarkdown } from '../src/lib/markdown';
 
-const ALLOWED_TAGS = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'UL', 'OL', 'LI', 'A', 'EM', 'STRONG', 'CODE', 'PRE', 'SPAN', 'BLOCKQUOTE', 'HR', 'BR', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'DEL', 'INPUT']);
-const ALLOWED_ATTRS = new Set(['href', 'rel', 'target', 'class', 'align', 'start', 'type', 'checked', 'disabled']);
+const ALLOWED_TAGS = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'UL', 'OL', 'LI', 'A', 'EM', 'STRONG', 'CODE', 'PRE', 'SPAN', 'BLOCKQUOTE', 'HR', 'BR', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'DEL', 'INPUT', 'DIV']);
+const ALLOWED_ATTRS = new Set(['href', 'rel', 'target', 'class', 'align', 'start', 'type', 'checked', 'disabled', 'data-mermaid']);
 
 /** Parses the rendered HTML and returns everything a browser could run or load. */
 function dangers(html: string): string[] {
@@ -34,6 +34,7 @@ const PAYLOADS = [
   '[x]("onmouseover="alert(1))', '<https://evil.example>', '<javascript:alert(1)>', '[a]: javascript:alert(1)\n\n[a]',
   '```html\n<script>alert(1)</script>\n```', '```js\n</code></pre><script>alert(1)</script>\n```', '```<img onerror=alert(1)>\n x\n```', '    <script>alert(1)</script>',
   '| a |\n|---|\n| <img src=x onerror=alert(1)> |', '- [ ] <img src=x onerror=alert(1)>', '# <script>alert(1)</script>', '*<img src=x onerror=alert(1)>*', '&lt;script&gt;alert(1)&lt;/script&gt;',
+  '```mermaid\n"><img src=x onerror=alert(1)>\n```', '```mermaid\n</code></pre></div><script>alert(1)</script>\n```',
   '<scr<script>ipt>alert(1)</scr</script>ipt>', '<IMG SRC=jAvascript:alert(1)>', '<a href=&#106;avascript:alert(1)>x</a>', '[x](&#106;avascript:alert(1))',
 ];
 

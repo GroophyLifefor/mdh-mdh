@@ -85,6 +85,10 @@ Testing is a separate document: [TESTING.md](TESTING.md).
 
 Chat apps fetch a pasted link without cookies, so the server fills the `<head>` of the pages at request time (`services/head.ts`): `og:*`, `twitter:card=summary_large_image`, `description`, and for `/p/<id>` the project name (escaped) with `noindex`. Absolute urls come from `PUBLIC_DOMAIN`, else from the request's Host (only a plausible host name is trusted). `GET /og/<id>.png` and `/og/default.png` draw a 1200 x 630 card with `@resvg/resvg-js` and Inter (`apps/server/assets/fonts`, SIL OFL); renders are cached in memory (200 entries, key = id + name, so a rename shows at once), an unknown id costs no render. Names the font cannot draw (other scripts, emoji) get a plain card; the `og:title` still carries the real name. The brand mark is `favicon.svg`, `apple-touch-icon.png` and the `LogoMark` component (follows the theme); the original `logo*.svg` files are left untouched (they embed c2pa metadata and fixed black strokes).
 
+## Mermaid diagrams
+
+A ```mermaid block in the preview is drawn by `apps/web/src/lib/mermaid.ts`. The library loads only when a block exists (own chunks, same origin, so the CSP is unchanged). Two layers keep other people's diagrams harmless: mermaid's `securityLevel: 'strict'`, and the result is shown as `<img src="data:image/svg+xml,...">`, where an SVG can never run a script. Results are cached per theme + source; a theme change draws them again. Limits: text inside a diagram cannot be selected, a very wide diagram is scaled down to the screen, only the common types were tried (flow, sequence, class, state, ER, gantt, pie).
+
 ## One domain is enough
 
 In production ONE process serves the API and the built website, so one domain (one port) is all that is needed. The two-process setup (website dev server + API server with a `/api` proxy) exists only for `pnpm dev`.

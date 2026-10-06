@@ -108,6 +108,18 @@ test.describe('on a phone', () => {
     await page.locator('#preview').screenshot({ path: process.env.SHOT_DIR ? `${process.env.SHOT_DIR}/preview-phone.png` : undefined });
   });
 
+  test('a wide mermaid diagram stays inside the screen', async ({ page }) => {
+    await registerAndCreate(page);
+    const nodes = Array.from({ length: 8 }, (_, i) => `N${i}[Step number ${i} with a long label]`).join(' --> ');
+    await typeInEditor(page, '```mermaid\ngraph LR\n  ' + nodes + '\n```', { replace: true });
+    await page.getByRole('button', { name: 'Preview', exact: true }).tap();
+    await expect(page.locator('#preview img.mermaid-img')).toBeVisible({ timeout: 15_000 });
+    await assertFits(page, 'preview with a wide diagram');
+    const img = (await page.locator('#preview img.mermaid-img').boundingBox())!;
+    expect(img.x + img.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
+    await page.locator('#preview').screenshot({ path: process.env.SHOT_DIR ? `${process.env.SHOT_DIR}/mermaid-phone.png` : undefined });
+  });
+
   test('header: the project name shrinks to fit and every button is reachable', async ({ page }) => {
     await register(page);
     await createProject(page, 'A very long project name that does not fit in a narrow header at all');

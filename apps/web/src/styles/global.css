@@ -142,6 +142,10 @@ button.icon-btn.on { color: var(--accent); }
 .preview pre { background: var(--page); padding: 0.8rem 0.9333rem; border-radius: 0.6667rem; overflow: auto; }
 .preview code { background: var(--page); padding: 0.1333rem 0.3333rem; border-radius: 0.3333rem; font-size: .88em; }
 .preview pre code { padding: 0; background: none; }
+.mermaid-block { margin: 1em 0; overflow-x: auto; }
+.mermaid-block:not([data-state]) pre { opacity: .6; }
+.mermaid-img { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+.mermaid-err { color: var(--danger); font-size: 0.8667rem; margin-bottom: 0.4rem; }
 .preview table { display: block; max-width: 100%; overflow-x: auto; border-collapse: separate; border-spacing: 0; margin: 1em 0; border: 1px solid var(--border); border-radius: 0.6667rem; }
 .preview th, .preview td { padding: 0.5333rem 0.8rem; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; line-height: 1.5; }
 .preview th { background: var(--page); font-weight: 600; white-space: nowrap; }

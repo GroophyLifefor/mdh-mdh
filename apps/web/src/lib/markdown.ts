@@ -29,6 +29,8 @@ marked.use({
     },
     code({ text, lang }) {
       const l = (lang || '').split(/\s/)[0];
+      // a mermaid diagram: the source stays in the page (escaped) and is drawn afterwards by lib/mermaid.ts
+      if (l === 'mermaid') return `<div class="mermaid-block" data-mermaid="${esc(text)}"><pre><code class="hljs">${esc(text)}</code></pre></div>`;
       const body = l && hljs.getLanguage(l) ? hljs.highlight(text, { language: l, ignoreIllegals: true }).value : esc(text);
       return `<pre><code class="hljs">${body}</code></pre>`;
     },
