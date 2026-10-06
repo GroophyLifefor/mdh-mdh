@@ -91,13 +91,13 @@ import ProfileDialog from '../../components/ProfileDialog.astro';
     <p class="muted hint" id="sh-desc"></p>
 
     <label>URL</label>
-    <div class="pw"><input id="sh-url" readonly /><button id="sh-url-copy" class="outline"><i data-icon="copy"></i>Copy</button></div>
+    <div class="pw"><textarea id="sh-url" class="fit" rows="1" readonly></textarea><button id="sh-url-copy" class="outline"><i data-icon="copy"></i>Copy</button></div>
 
     <label>Password</label>
     <div class="pw"><input id="sh-pw" readonly /><button id="sh-pw-copy" class="outline"><i data-icon="copy"></i>Copy</button><button id="sh-new" class="danger" title="The old password stops working"><i data-icon="undo"></i>New</button></div>
 
     <label>Prompt for your AI <span class="muted">— paste this to an AI agent</span></label>
-    <textarea id="sh-prompt" rows="7" readonly></textarea>
+    <textarea id="sh-prompt" class="fit" rows="4" readonly></textarea>
     <div class="actions"><button id="sh-close">Close</button><button id="sh-prompt-copy" class="primary"><i data-icon="copy"></i>Copy prompt</button></div>
   </dialog>
 

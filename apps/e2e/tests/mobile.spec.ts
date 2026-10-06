@@ -96,6 +96,18 @@ test.describe('on a phone', () => {
     await expect(page.locator('section.center')).toBeVisible();
   });
 
+  test('a wide table scrolls by itself; the page does not scroll sideways', async ({ page }) => {
+    await registerAndCreate(page);
+    const wide = '| a | b | c | d |\n|---|---|---|---|\n| ' + Array.from({ length: 4 }, () => 'a-very-long-unbreakable-cell-value-'.repeat(3)).join(' | ') + ' |\n\n- [ ] one task with a box\n';
+    await typeInEditor(page, wide, { replace: true });
+    await page.getByRole('button', { name: 'Preview', exact: true }).tap();
+    await expect(page.locator('#preview table')).toBeVisible();
+    await assertFits(page, 'preview with a wide table');
+    const t = await page.locator('#preview table').evaluate((e) => ({ scroll: e.scrollWidth, client: e.clientWidth }));
+    expect(t.scroll).toBeGreaterThan(t.client);                          // it is the table that scrolls
+    await page.locator('#preview').screenshot({ path: process.env.SHOT_DIR ? `${process.env.SHOT_DIR}/preview-phone.png` : undefined });
+  });
+
   test('header: the project name shrinks to fit and every button is reachable', async ({ page }) => {
     await register(page);
     await createProject(page, 'A very long project name that does not fit in a narrow header at all');

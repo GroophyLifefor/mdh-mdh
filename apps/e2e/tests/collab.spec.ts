@@ -14,6 +14,15 @@ test.describe('sharing and working together', () => {
     const prompt = page.locator('#sh-prompt');
     await expect(prompt).toHaveValue(new RegExp(`Step 1\\. Read ${base}/llm\\.txt`));
     await expect(prompt).toHaveValue(new RegExp(`Authorization: Bearer ${rw}`));
+    for (const id of ['#sh-url', '#sh-prompt']) {                      // the boxes show ALL their text: nothing to scroll
+      const { scroll, client } = await page.locator(id).evaluate((e) => ({ scroll: e.scrollHeight, client: e.clientHeight }));
+      expect(scroll, `${id} needs no scrolling`).toBeLessThanOrEqual(client);
+    }
+    const box = (await page.locator('#share-dlg').boundingBox())!;      // the dialog fits the window, so its buttons can be reached
+    expect(box.y + box.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+    await page.getByRole('button', { name: 'Copy prompt' }).scrollIntoViewIfNeeded();   // reachable by scrolling the dialog
+    await expect(page.getByRole('button', { name: 'Copy prompt' })).toBeInViewport();
+    expect(await prompt.inputValue()).not.toMatch(/[a-z,]\n[a-z]/);          // no hard line breaks in the middle of a sentence
     await page.getByRole('button', { name: 'Can view' }).click();
     const ro = await page.locator('#sh-pw').inputValue();
     expect(ro).toMatch(/^ro_[A-Za-z0-9]{24}$/);

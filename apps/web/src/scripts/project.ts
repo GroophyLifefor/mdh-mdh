@@ -825,15 +825,25 @@ function fillShare() {
   $('sh-rw').classList.toggle('on', share.mode === 'rw');
   $('sh-ro').classList.toggle('on', share.mode === 'ro');
   $('sh-desc').textContent = share.mode === 'rw' ? 'Can read and change files.' : 'Can read. Can’t change anything.';
-  $<HTMLInputElement>('sh-url').value = `${share.origin}/p/${info.id}`;
+  $<HTMLTextAreaElement>('sh-url').value = `${share.origin}/p/${info.id}`;
   $<HTMLInputElement>('sh-pw').value = share.pw[share.mode];
   $<HTMLTextAreaElement>('sh-prompt').value = sharePrompt({ origin: share.origin, projectId: info.id, mode: share.mode, password: share.pw[share.mode] });
+  fitBoxes();
+}
+/** Grow the read-only boxes to show all their text (measured only while the dialog is open). */
+function fitBoxes() {
+  for (const id of ['sh-url', 'sh-prompt']) {
+    const box = $<HTMLTextAreaElement>(id);
+    box.style.height = 'auto';
+    if (box.scrollHeight) box.style.height = `${box.scrollHeight + 2}px`;
+  }
 }
 $('share-btn').onclick = async () => {
   try {
     [share.pw, share.origin] = await Promise.all([projectsApi.passwords(projectId), siteUrl()]);
     fillShare();
     dlg('share-dlg').showModal();
+    fitBoxes();
   } catch (e) { fail(e); }
 };
 $('sh-rw').onclick = () => { share.mode = 'rw'; fillShare(); };

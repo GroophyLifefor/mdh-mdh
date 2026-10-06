@@ -1,5 +1,7 @@
 import { expect, test, registerAndCreate, showHistory, treeItem, typeInEditor, watchProblems, clickItem } from './helpers';
 
+const TASKS_AND_TABLE = '# Tasks\n\n- [ ] 1.1 Implement SSO login (sign-in URL + nonce, browser open, status polling, timeout, no-browser fallback) and verify unit tests pass\n- [x] 1.2 Done item\n- plain bullet\n\n| # | Assumption | Status |\n|---|:---|---:|\n| 1 | Storage: data.json under the user id in the Console bucket; the HTML report is never stored at all, it is rendered on demand | agreed |\n| 2 | Identity | proposed |\n';
+
 test.describe('editing', () => {
   test('typing is saved by itself and is still there after a reload', async ({ page }) => {
     const problems = watchProblems(page);
@@ -40,6 +42,30 @@ test.describe('editing', () => {
     const put = page.waitForRequest((r) => r.method() === 'PUT' && r.url().includes(`/api/projects/${id}/file`), { timeout: 600 });
     await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));   // page stays visible: no visibilitychange flush
     expect((await put).postDataJSON().content).toBe('SENT BY PAGEHIDE');
+  });
+
+  test('preview: task list items keep the box on the text line, and tables have borders', async ({ page }) => {
+    await registerAndCreate(page);
+    await typeInEditor(page, TASKS_AND_TABLE, { replace: true });
+    await page.getByRole('button', { name: 'Preview', exact: true }).click();
+    const boxes = page.locator('#preview li input[type=checkbox]');
+    await expect(boxes).toHaveCount(2);
+    await expect(boxes.nth(1)).toBeChecked();
+    for (const i of [0, 1]) {
+      const box = (await boxes.nth(i).boundingBox())!;
+      const li = (await page.locator('#preview li').nth(i).boundingBox())!;
+      expect(box.width).toBeLessThan(24);
+      const text = (await page.locator('#preview li').nth(i).evaluate((e) => { const r = document.createRange(); r.selectNodeContents(e); const rs = r.getClientRects(); return rs[rs.length - 1].left; }));
+      expect(text).toBeGreaterThan(box.x + box.width);                  // even the last text line stays right of the box (hanging indent)                               // a small box, not a full-width field
+      expect(box.y - li.y).toBeLessThan(li.height / 2);                 // on the first text line, not above it
+    }
+    await expect(page.locator('#preview li:has(input) ').first()).toHaveCSS('list-style-type', 'none');
+    const th = page.locator('#preview th').first();
+    await expect(th).toHaveCSS('border-bottom-width', '1px');
+    await expect(th).toHaveCSS('text-align', 'left');
+    await expect(page.locator('#preview th').nth(2)).toHaveCSS('text-align', 'right');   // |---:| is honoured
+    await expect(page.locator('#preview td').first()).toHaveCSS('padding-left', /^[1-9]/);
+    await page.locator('#preview').screenshot({ path: process.env.SHOT_DIR ? `${process.env.SHOT_DIR}/preview-desktop.png` : undefined });
   });
 
   test('switching files saves the first one right away (nothing is lost)', async ({ page }) => {

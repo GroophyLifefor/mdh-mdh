@@ -2,6 +2,7 @@
 
 /* Themes: add a new theme by adding another [data-theme="name"] block. */
 :root, [data-theme="light"] {
+  color-scheme: light;
   --page: #f7f7f8; --bg: #ffffff; --border: #e8e8ec; --text: #18181b; --muted: #71717a;
   --hover: #f1f1f4; --sel: #eef3ff; --accent: #2563eb; --accent-text: #ffffff;
   --danger: #dc2626; --ok: #16a34a; --shadow: 0 0.6667rem 2.6667rem rgba(0,0,0,.12);
@@ -9,6 +10,7 @@
   --syn-fn: #2563eb; --syn-type: #0e7490; --syn-tag: #be185d; --syn-punct: #6b7280;
 }
 [data-theme="dark"] {
+  color-scheme: dark;
   --page: #0e0f12; --bg: #16171b; --border: #26272d; --text: #ececf0; --muted: #9a9aa6;
   --hover: #202127; --sel: #1d2740; --accent: #5b8cff; --accent-text: #0b1020;
   --danger: #ff6b6b; --ok: #4ade80; --shadow: 0 0.6667rem 2.6667rem rgba(0,0,0,.6);
@@ -63,7 +65,7 @@ header.top .chip { height: auto; font-size: 0.8rem; margin: 0 0.2rem; }
 .chip { color: var(--muted); font-size: 0.8rem; border: 1px solid var(--border); border-radius: 66.6rem; padding: 1px 0.6667rem; margin-right: 0.4rem; }
 
 /* Dialogs */
-dialog { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 1.0667rem; padding: 1.6rem; width: min(29.3333rem, 92vw); box-shadow: var(--shadow); }
+dialog { max-height: calc(100dvh - 2rem); overflow: auto; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 1.0667rem; padding: 1.6rem; width: min(29.3333rem, 92vw); box-shadow: var(--shadow); }
 dialog::backdrop { background: rgba(10,10,14,.4); }
 dialog h2 { margin: 0 0 0.2667rem; font-size: 1.3333rem; font-weight: 650; letter-spacing: -.01em; }
 dialog .actions { display: flex; gap: 0.5333rem; justify-content: flex-end; margin-top: 1.6rem; }
@@ -137,6 +139,21 @@ button.icon-btn.on { color: var(--accent); }
 .preview pre { background: var(--page); padding: 0.8rem 0.9333rem; border-radius: 0.6667rem; overflow: auto; }
 .preview code { background: var(--page); padding: 0.1333rem 0.3333rem; border-radius: 0.3333rem; font-size: .88em; }
 .preview pre code { padding: 0; background: none; }
+.preview table { display: block; max-width: 100%; overflow-x: auto; border-collapse: separate; border-spacing: 0; margin: 1em 0; border: 1px solid var(--border); border-radius: 0.6667rem; }
+.preview th, .preview td { padding: 0.5333rem 0.8rem; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; line-height: 1.5; }
+.preview th { background: var(--page); font-weight: 600; white-space: nowrap; }
+.preview th[align=center], .preview td[align=center] { text-align: center; }
+.preview th[align=right], .preview td[align=right] { text-align: right; }
+.preview tr:last-child td { border-bottom: 0; }
+.preview th:not(:last-child), .preview td:not(:last-child) { border-right: 1px solid var(--border); }
+.preview blockquote { margin: 1em 0; padding: 0.1em 1em; border-left: 3px solid var(--border); color: var(--muted); }
+.preview hr { border: 0; border-top: 1px solid var(--border); margin: 1.6em 0; }
+.preview ul, .preview ol { padding-left: 1.6em; }
+.preview li > p { margin: 0.2em 0; }
+.preview li > ul, .preview li > ol { margin: 0.2em 0; }
+/* task list: marked renders "- [ ]" as a disabled checkbox in the item; the form-field rule above must not apply to it */
+.preview li:has(> input[type=checkbox]) { list-style: none; position: relative; margin-left: -1.6em; padding-left: 1.7em; }
+.preview li > input[type=checkbox] { position: absolute; left: 0; top: 0.5em; width: 1em; height: 1em; padding: 0; margin: 0; accent-color: var(--accent); }
 .empty { color: var(--muted); padding: 4rem 1.3333rem; text-align: center; }
 .yaml-ok { color: var(--ok); font-size: 0.8667rem; font-weight: 500; }
 .yaml-bad { color: var(--danger); font-size: 0.8667rem; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -165,6 +182,7 @@ button.icon-btn.on { color: var(--accent); }
 
 textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 0.5333rem; padding: 0.6rem 0.8rem; font: 0.8rem/1.55 ui-monospace, 'SF Mono', Menlo, monospace; resize: vertical; outline: none; }
 textarea:focus { border-color: var(--accent); }
+textarea.fit { resize: none; overflow: hidden; min-height: 44px; font-size: 0.8667rem; line-height: 1.6; }
 .hint { margin: 0 0 0.4rem; }
 
 /* code in the markdown preview (highlight.js) */
@@ -201,7 +219,7 @@ button.danger-solid:disabled { opacity: .4; }
   /* fingers need 44px, and text fields need 16px or iOS zooms the page when they are focused */
   button, a.icon-btn, select, input:not([type="checkbox"]) { min-height: 44px; }
   button.icon-btn, a.icon-btn { min-width: 44px; }
-  input, select, textarea, .editor .cm-editor { font-size: 16px; }
+  input, select, textarea, textarea.fit, .editor .cm-editor { font-size: 16px; }
   .node { min-height: 44px; }
   .change { padding: 0.8rem; }
 }
