@@ -14,7 +14,7 @@ const documented = [...ENDPOINT_BLOCK.matchAll(/^ {4}(GET|PUT|POST|PATCH|DELETE)
 
 /** Routes that a password (Bearer) can never use, or that are for the website only. They are not in llm.txt on purpose. */
 const NOT_FOR_AGENTS = new Set([
-  'GET /api/health', 'GET /api/config',                                                                              // for the website
+  'GET /api/health', 'GET /api/config', 'GET /api/projects/:id/public',                                                                              // for the website
   'POST /api/auth/register', 'POST /api/auth/login', 'POST /api/auth/logout', 'GET /api/auth/me', 'PATCH /api/auth/me', // accounts
   'GET /api/projects', 'POST /api/projects',                                                                          // need an account
   'PATCH /api/projects/:id', 'DELETE /api/projects/:id', 'GET /api/projects/:id/passwords', 'POST /api/projects/:id/passwords/:mode/refresh', // owner only

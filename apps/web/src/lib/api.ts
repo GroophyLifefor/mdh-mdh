@@ -63,6 +63,8 @@ export const projects = {
   remove: (id: string) => request<{ ok: true }>('DELETE', p(id)),
   passwords: (id: string) => request<{ ro: string; rw: string }>('GET', `${p(id)}/passwords`),
   refreshPassword: (id: string, mode: Mode) => request<{ password: string }>('POST', `${p(id)}/passwords/${mode}/refresh`, {}).then((r) => r.password),
+  /** The name of a project: public to anyone who knows its id (404 when there is no such project). */
+  publicName: (id: string) => request<{ name: string }>('GET', `${p(id)}/public`).then((r) => r.name),
   openGate: (id: string, password: string, name?: string) => request<{ access: { level: Mode; name: string } }>('POST', `${p(id)}/access`, { password, name }),
 };
 

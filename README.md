@@ -13,6 +13,8 @@ docker compose up -d --build
 
 Open `http://localhost:3000` (or your `PORT`). The host port comes from `docker-compose.override.yml`, which Compose reads automatically for local use; the main `docker-compose.yml` publishes no port, so a reverse proxy (Coolify, Caddy, ...) is the only way in when you deploy it. One container serves the website and the API; PostgreSQL 18 runs in a second one with its data in the `dbdata` volume. Tables are created on start.
 
+Pasted links get a preview card (name of the project and a picture). Only the **name** of a project is visible to someone who has the link; files and passwords are not.
+
 ## Settings (`.env`)
 
 | Name | Required | What it does |

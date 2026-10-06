@@ -892,6 +892,7 @@ function openGate(message?: string) {
   gateOpen = true;
   $('gate-msg').textContent = message ?? 'Enter the password you were given.';
   $('gate-err').textContent = '';
+  void projectsApi.publicName(projectId).then((name) => { const el = $('gate-proj'); el.textContent = name; el.classList.remove('hidden'); }).catch(() => { /* no name to show */ });
   const d = dlg('gate-dlg');
   d.addEventListener('cancel', (e) => e.preventDefault()); // it cannot be dismissed
   d.showModal();

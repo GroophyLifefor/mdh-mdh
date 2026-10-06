@@ -1,9 +1,9 @@
 import type { Ctx } from '../context';
 import { decrypt, encrypt, generateProjectPassword, lookupHash, type Mode } from '../crypto';
 import { withTx } from '../db';
-import { notFound } from '../errors';
+import { notFound, tooManyRequests } from '../errors';
 import { recordChange } from './history';
-import type { Policy, ProjectRow } from './access';
+import { UUID_RE, type Policy, type ProjectRow } from './access';
 import type { User } from './auth';
 
 export type ProjectInfo = { id: string; name: string; rollbackPolicy: Policy; updatedAt: string };
@@ -75,4 +75,17 @@ export async function refreshPassword(ctx: Ctx, projectId: string, mode: Mode): 
   const r = await ctx.db.query(sql, [projectId, enc, hash]);
   if (!r.rowCount) throw notFound('Project not found');
   return pw;
+}
+
+/** The name of a project, for anyone who knows its id (the id is the secret; the name is not). Null when there is no such project. */
+export async function publicName(ctx: Ctx, id: string): Promise<string | null> {
+  if (!UUID_RE.test(id)) return null;
+  const { rows } = await ctx.db.query<{ name: string }>('SELECT name FROM projects WHERE id = $1', [id]);
+  return rows[0]?.name ?? null;
+}
+
+/** Counts one name lookup for this IP; throws 429 when it asks too often. */
+export function countLookup(ctx: Ctx, ip: string): void {
+  if (ctx.limits.lookups.isLimited(ip)) throw tooManyRequests(ctx.limits.lookups.retryAfterSeconds(ip));
+  ctx.limits.lookups.hit(ip);
 }

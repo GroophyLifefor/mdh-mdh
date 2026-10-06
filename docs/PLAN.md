@@ -39,6 +39,7 @@ Testing is a separate document: [TESTING.md](TESTING.md).
 | passwords | `GET /projects/:id/passwords` (owner), `POST /projects/:id/passwords/:mode/refresh` |
 | access | `POST /projects/:id/access` (gate), `GET /access` (Bearer: who am I, which project, which level) |
 | config | `GET /config` (public: `{ publicUrl }`) |
+| public | `GET /projects/:id/public` (the name only; anyone who knows the id) |
 | files | `GET /projects/:id/tree`, `GET /projects/:id/download?path=` (a file, a folder as .zip, or no path: the whole project as .zip), `GET /projects/:id/file?path=`, `PUT /projects/:id/file`, `POST /projects/:id/files` (create), `POST /projects/:id/move`, `DELETE /projects/:id/file?path=`, `POST /projects/:id/upload` |
 | history | `GET /projects/:id/history`, `GET /projects/:id/history/:seq`, `POST /projects/:id/history/:seq/rollback` |
 
@@ -62,7 +63,8 @@ Testing is a separate document: [TESTING.md](TESTING.md).
 
 - **Folder names cannot end in .md/.yml/.yaml** (service check and a database constraint). A path is then always exactly one kind, which keeps history rows unambiguous.
 - **Every folder has its own row** in `nodes`; missing folders are created on the way by create, move and upload.
-- **No access, or no such project, looks the same:** `401 password_required`, so ids cannot be probed. A valid password for another project is also `password_required`; a wrong or refreshed Bearer is `401 invalid_token`.
+- **No access, or no such project, looks the same:** `401 password_required` on every endpoint that reads or changes a project. A valid password for another project is also `password_required`; a wrong or refreshed Bearer is `401 invalid_token`.
+- **The project NAME is public to anyone who knows the id; nothing else is** (decided by the owner). `GET /api/projects/:id/public` returns `{ name }` (404 for an unknown or malformed id, limited to 120 requests per minute per IP). So the existence of an id can be tested, which is acceptable because ids are uuidv7 (74 random bits). The name is used for link cards and the password gate.
 - **Owner = the signed-in session user only.** A project password can never read passwords, change settings or delete the project.
 - **Rollback policy:** `author_and_write` = the owner and anyone with a read-write password; `author_only` = only the project owner (the signed-in account that owns it). A password, even read-write, is never the owner. Read-only can never roll back.
 - **Autosave merging is server-side** (same actor + same file + latest entry is an edit + under 10 minutes). An edit typed back to the original text stays as an entry with equal before/after, because history never shrinks.
@@ -79,6 +81,10 @@ Testing is a separate document: [TESTING.md](TESTING.md).
 - **Added after Milestone 3:** `PUBLIC_DOMAIN` (optional; see below), file / folder / whole-project download as .zip, history panel closed by default, save when the tab is closed, and a real phone layout (tabs for Files / Editor / History, row menu instead of hover buttons, upload button, 44 px touch targets, 16 px text fields).
 - **Milestone 4 (Docker image, compose, README):** done. The image builds, `docker compose up` gives two healthy containers, `scripts/smoke.sh` passes 40/40 against it, data survives a restart.
 
+## Link cards and the logo
+
+Chat apps fetch a pasted link without cookies, so the server fills the `<head>` of the pages at request time (`services/head.ts`): `og:*`, `twitter:card=summary_large_image`, `description`, and for `/p/<id>` the project name (escaped) with `noindex`. Absolute urls come from `PUBLIC_DOMAIN`, else from the request's Host (only a plausible host name is trusted). `GET /og/<id>.png` and `/og/default.png` draw a 1200 x 630 card with `@resvg/resvg-js` and Inter (`apps/server/assets/fonts`, SIL OFL); renders are cached in memory (200 entries, key = id + name, so a rename shows at once), an unknown id costs no render. Names the font cannot draw (other scripts, emoji) get a plain card; the `og:title` still carries the real name. The brand mark is `favicon.svg`, `apple-touch-icon.png` and the `LogoMark` component (follows the theme); the original `logo*.svg` files are left untouched (they embed c2pa metadata and fixed black strokes).
+
 ## One domain is enough
 
 In production ONE process serves the API and the built website, so one domain (one port) is all that is needed. The two-process setup (website dev server + API server with a `/api` proxy) exists only for `pnpm dev`.
@@ -93,6 +99,7 @@ In production ONE process serves the API and the built website, so one domain (o
 - The rate limiter is per process.
 - Changes by other people are noticed by looking every 10 s, not instantly (no websockets).
 - Dropping a real folder works through the browser's `webkitGetAsEntry`; it is unit tested with fake entries but has not been tried with a real drop.
+- Link cards are tested against our own HTML and PNG, not against real Slack / WhatsApp / Discord (they also cache cards for a long time).
 - Not tried: a build on another machine / CPU architecture, or behind a real reverse proxy.
 - No git repository yet; nothing is committed or pushed.
 - `.github/workflows/ci.yml` is written but has never run.

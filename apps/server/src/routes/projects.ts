@@ -30,6 +30,14 @@ export function projectRoutes(ctx: Ctx) {
     res.json({ project: projects.toInfo(project), access: { level: access.level, name: access.actor.name } });
   });
 
+  // The name of a project is public to anyone who knows its id; nothing else is. Used by link cards and the password gate.
+  r.get('/:id/public', async (req, res) => {
+    projects.countLookup(ctx, req.ip ?? '');
+    const name = await projects.publicName(ctx, req.params.id!);
+    if (name === null) throw notFound('No such project');
+    res.json({ name });
+  });
+
   r.patch('/:id', async (req, res) => {
     const { project } = await authorize(ctx, req, req.params.id!, 'owner');
     res.json({ project: await projects.updateSettings(ctx, project.id, parse(settingsBody, req.body)) });

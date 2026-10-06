@@ -1,10 +1,11 @@
 ---
 import Base from '../layouts/Base.astro';
 import ProfileDialog from '../components/ProfileDialog.astro';
+import LogoMark from '../components/LogoMark.astro';
 ---
 <Base title="mdh-mdh">
   <header class="top">
-    <div class="crumb"><a href="/">mdh-mdh</a></div>
+    <div class="crumb"><a href="/" class="brand"><LogoMark />mdh-mdh</a></div>
     <span class="spacer"></span>
     <button id="theme-btn" class="icon-btn"></button>
     <button id="login-btn" class="primary hidden">Log in</button>

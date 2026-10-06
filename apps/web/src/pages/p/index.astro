@@ -1,11 +1,12 @@
 ---
 import Base from '../../layouts/Base.astro';
 import ProfileDialog from '../../components/ProfileDialog.astro';
+import LogoMark from '../../components/LogoMark.astro';
 ---
 <Base title="Project · mdh-mdh" bodyClass="one">
   <header class="top">
     <div class="crumb">
-      <a href="/">mdh-mdh</a><i data-icon="chevron-right" data-size="14"></i>
+      <a href="/" class="brand"><LogoMark />mdh-mdh</a><i data-icon="chevron-right" data-size="14"></i>
       <button id="switch-btn" title="Change project"><span id="proj-name"></span><i data-icon="chevron-down" data-size="14"></i></button>
     </div>
     <button id="gear-btn" class="icon-btn hidden" title="Project settings"><i data-icon="gear"></i></button>
@@ -73,6 +74,7 @@ import ProfileDialog from '../../components/ProfileDialog.astro';
 
   <dialog id="gate-dlg">
     <h2>This project is protected</h2>
+    <p class="gate-name hidden" id="gate-proj"></p>
     <p class="muted" id="gate-msg">Enter the password you were given.</p>
     <label>Password</label>
     <input id="gate-pw" type="password" placeholder="ro_… or rw_…" />

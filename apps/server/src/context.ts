@@ -11,5 +11,5 @@ export type Ctx = {
   scryptCost: ScryptCost;
   /** A real scrypt hash of nothing in particular. Checked when a username does not exist, so that case takes as long as a wrong password. */
   dummyHash: Promise<string>;
-  limits: { login: RateLimiter; register: RateLimiter; passwords: RateLimiter };
+  limits: { login: RateLimiter; register: RateLimiter; passwords: RateLimiter; lookups: RateLimiter };
 };

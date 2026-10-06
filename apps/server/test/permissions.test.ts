@@ -67,6 +67,8 @@ export const ROWS: Row[] = [
   { route: 'GET /api/projects', method: 'get', url: () => '/api/projects', expect: signedIn(200) },
   { route: 'POST /api/projects', method: 'post', url: () => '/api/projects', body: () => ({ name: 'New' }), expect: signedIn(201) },
   { route: 'GET /api/projects/:id', method: 'get', url: (f) => `/api/projects/${f.p.id}`, expect: readers(200) },
+  // the NAME of a project is public to whoever knows its id; this endpoint returns nothing else
+  { route: 'GET /api/projects/:id/public', method: 'get', url: (f) => `/api/projects/${f.p.id}/public`, expect: everyone(200) },
   { route: 'PATCH /api/projects/:id', method: 'patch', url: (f) => `/api/projects/${f.p.id}`, body: () => ({ rollbackPolicy: 'author_only' }), expect: ownerOnly(200) },
   { route: 'DELETE /api/projects/:id', method: 'delete', url: (f) => `/api/projects/${f.p.id}`, expect: ownerOnly(200) },
   { route: 'GET /api/projects/:id/passwords', method: 'get', url: (f) => `/api/projects/${f.p.id}/passwords`, expect: ownerOnly(200) },

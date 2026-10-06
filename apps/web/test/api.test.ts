@@ -76,6 +76,7 @@ describe('each call hits the right endpoint', () => {
     ['projects.remove', () => projects.remove(ID), 'DELETE', `/api/projects/${ID}`],
     ['projects.passwords', () => projects.passwords(ID), 'GET', `/api/projects/${ID}/passwords`],
     ['projects.refreshPassword', () => projects.refreshPassword(ID, 'rw'), 'POST', `/api/projects/${ID}/passwords/rw/refresh`, {}],
+    ['projects.publicName', () => projects.publicName(ID), 'GET', `/api/projects/${ID}/public`],
     ['projects.openGate', () => projects.openGate(ID, 'pw', 'Sam'), 'POST', `/api/projects/${ID}/access`, { password: 'pw', name: 'Sam' }],
     ['files.tree', () => files.tree(ID), 'GET', `/api/projects/${ID}/tree`],
     ['files.read', () => files.read(ID, 'a b/ü.md'), 'GET', `/api/projects/${ID}/file?path=a+b%2F%C3%BC.md`],

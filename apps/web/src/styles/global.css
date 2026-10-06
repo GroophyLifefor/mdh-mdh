@@ -61,6 +61,9 @@ header.top .chip { height: auto; font-size: 0.8rem; margin: 0 0.2rem; }
 .crumb { display: flex; align-items: center; gap: 0.4rem; font-size: 1rem; color: var(--muted); }
 .crumb a { color: var(--muted); text-decoration: none; font-weight: 600; }
 .crumb a:hover { color: var(--text); }
+.crumb a.brand { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--text); }
+.logo { color: var(--text); flex: none; }
+.gate-name { font-size: 1.1rem; font-weight: 600; margin: 0.2rem 0 0; overflow-wrap: anywhere; }
 .crumb b { color: var(--text); font-weight: 600; }
 .chip { color: var(--muted); font-size: 0.8rem; border: 1px solid var(--border); border-radius: 66.6rem; padding: 1px 0.6667rem; margin-right: 0.4rem; }
 

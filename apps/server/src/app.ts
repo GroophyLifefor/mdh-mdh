@@ -38,6 +38,7 @@ export function createApp(deps: Deps) {
       login: new RateLimiter(10, 15 * 60_000, now),    // failed logins per IP
       register: new RateLimiter(20, 60 * 60_000, now), // sign-ups per IP
       passwords: new RateLimiter(30, 15 * 60_000, now), // wrong project passwords (gate or Bearer) per IP
+      lookups: new RateLimiter(120, 60_000, now),       // project-name lookups (public endpoint, link cards) per IP
     },
   };
 
@@ -79,7 +80,7 @@ export function createApp(deps: Deps) {
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: { code: 'not_found', message: 'Unknown endpoint' } });
   });
-  if (deps.staticDir) mountStatic(app, deps.staticDir);
+  if (deps.staticDir) mountStatic(app, deps.staticDir, { ctx, publicUrl: deps.publicUrl });
 
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (err instanceof AppError) {
