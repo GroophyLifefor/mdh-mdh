@@ -1,5 +1,5 @@
 // The address follows what is open (?file=, ?diff=), so a link lands on the same view, after the password gate.
-import { agent, clickItem, expect, passwordsOf, registerAndCreate, showHistory, stranger, test, treeItem, typeInEditor, watchProblems } from './helpers';
+import { agent, clickItem, expect, passwordsOf, registerAndCreate, showHistory, sourceDiff, stranger, test, treeItem, typeInEditor, watchProblems } from './helpers';
 
 /** Opens a file by clicking through its folders (a folder that is already open must not be closed again). */
 async function openInTree(page: import('@playwright/test').Page, path: string) {
@@ -83,6 +83,8 @@ test.describe('links to a file', () => {
 });
 
 test.describe('diff view', () => {
+  test.beforeEach(async ({ page }) => { await sourceDiff(page); });
+
   test('the diff icon of a history entry opens what changed; the address carries it; a reload and another browser see the same', async ({ page, browser }) => {
     const problems = watchProblems(page);
     const { id } = await registerAndCreate(page);
@@ -111,6 +113,7 @@ test.describe('diff view', () => {
     const pw = await passwordsOf(page, id);
     for (const password of [pw.ro, pw.rw]) {                                            // anyone with access can look at changes
       const { context, page: guest } = await stranger(browser);
+      await sourceDiff(guest);
       await guest.goto(page.url());
       await expect(guest.locator('#gate-dlg')).toBeVisible();
       await expect(guest.locator('#diff-dlg')).toBeHidden();
@@ -184,15 +187,83 @@ test.describe('diff view', () => {
     await expect(page.locator('#diff-meta')).not.toContainText('edited between');
   });
 
+  test('many files with long paths: a tree with one row per folder chain, the file names first, previous / next, keys', async ({ page }) => {
+    const { id } = await registerAndCreate(page);
+    const deep = 'ns-upgrade-service/openspec/changes/authenticated-report-pipeline';
+    const paths = [`${deep}/design.md`, `${deep}/proposal.md`, `${deep}/specs/ingestion-auth/spec.md`, `${deep}/specs/user-report-storage/spec.md`, 'docs/guide.md', 'top.md'];
+    await (await writer(page, id)).post('/upload', { files: paths.map((p) => ({ path: p, content: `# ${p}\n` })) });
+    await page.reload();
+    await showHistory(page);
+    await page.locator('#history .change').first().getByRole('button', { name: /Show what changed/ }).click();
+    const tree = page.locator('#diff-files');
+    await expect(page.locator('#diff-summary')).toHaveText('6 files: 6 new');
+    await expect(tree.locator('.dt.dir', { hasText: deep })).toHaveCount(1);                       // the 4 folders are ONE row
+    await expect(tree.locator('.dt.dir')).toHaveCount(5);                                          // the chain, specs, its two folders, docs
+    await expect(tree.locator('.dt.file', { hasText: 'design.md' })).toBeVisible();
+    for (const row of await tree.locator('.dt.file .label').all()) {                                  // a file row shows the NAME, never a long path
+      expect((await row.textContent())!.includes('/')).toBe(false);
+    }
+    await expect(tree.locator('.dt.file').first().locator('.mark.created')).toHaveText('+');
+    await expect(page.locator('#diff-which')).toContainText('1 / 6');
+    const first = await page.locator('#diff-which').textContent();
+
+    await page.locator('#diff-next').click();                                                       // next file
+    await expect(page.locator('#diff-which')).toContainText('2 / 6');
+    expect(await page.locator('#diff-which').textContent()).not.toBe(first);
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('#diff-which')).toContainText('3 / 6');
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.locator('#diff-which')).toContainText('2 / 6');
+    await expect(page.locator('#diff-prev')).toBeEnabled();
+
+    await tree.locator('.dt.dir', { hasText: deep }).click();                                      // closing a folder hides what is inside
+    await expect(tree.locator('.dt.file', { hasText: 'design.md' })).toHaveCount(0);
+    await page.locator('#diff-next').click();                                                       // stepping into it opens it again
+    await expect(tree.locator('.dt.file.sel')).toBeVisible();
+    const last = tree.locator('.dt.file', { hasText: 'top.md' });
+    await last.click();
+    await expect(page.locator('#diff-which')).toContainText('6 / 6');
+    await expect(page.locator('#diff-next')).toBeDisabled();
+    await page.locator('#diff-dlg').screenshot({ path: process.env.SHOT_DIR ? `${process.env.SHOT_DIR}/diff-tree-desktop.png` : undefined });
+  });
+
+  test('line numbers: one column for a new or deleted file, two for a changed one; the previous / next arrows are centred', async ({ page }) => {
+    const { id } = await registerAndCreate(page);
+    await seed(page, id);
+    await page.reload();
+    await showHistory(page);
+    await page.locator('#history .change').nth(0).getByRole('button', { name: /Show what changed/ }).click();   // the edit: two columns
+    await expect(page.locator('#diff-dlg .dl.del .no')).toHaveCount(2);
+    await page.locator('#diff-close').click();
+    await page.locator('#history .change').nth(1).getByRole('button', { name: /Show what changed/ }).click();   // the creation: one column
+    await expect(page.locator('#diff-dlg .dl.add').first().locator('.no')).toHaveCount(1);
+    const row = (await page.locator('#diff-dlg .dl.add').first().boundingBox())!;
+    const num = (await page.locator('#diff-dlg .dl.add .no').first().boundingBox())!;
+    const sign = (await page.locator('#diff-dlg .dl.add .sign').first().boundingBox())!;
+    expect(sign.x - row.x, 'no big empty gap left of the +').toBeLessThan(60);
+    expect(num.width).toBeLessThan(50);
+    await page.locator('#diff-close').click();
+    await (await writer(page, id)).post('/upload', { files: [{ path: 'x.md', content: 'x' }, { path: 'y.md', content: 'y' }] });
+    await page.reload();
+    await showHistory(page);
+    await page.locator('#history .change').first().getByRole('button', { name: /Show what changed/ }).click();
+    for (const id of ['#diff-prev', '#diff-next']) {
+      const b = (await page.locator(id).boundingBox())!;
+      const g = (await page.locator(`${id} svg`).boundingBox())!;
+      expect(Math.abs((g.x + g.width / 2) - (b.x + b.width / 2)), `${id} arrow is centred horizontally`).toBeLessThan(1.5);
+      expect(Math.abs((g.y + g.height / 2) - (b.y + b.height / 2)), `${id} arrow is centred vertically`).toBeLessThan(1.5);
+    }
+  });
+
   test('a change with several files has a file list; picking one updates the address', async ({ page }) => {
     const { id } = await registerAndCreate(page);
     await (await writer(page, id)).post('/upload', { files: [{ path: 'a.md', content: 'A1' }, { path: 'b.md', content: 'B1' }] });
     await page.reload();
     await showHistory(page);
     await page.locator('#history .change').first().getByRole('button', { name: /Show what changed/ }).click();
-    await expect(page.locator('#diff-files li')).toHaveCount(2);
+    await expect(page.locator('#diff-files .dt.file')).toHaveCount(2);
     await expect(page.locator('#diff-dlg .dl.add')).toContainText('A1');
-    await page.locator('#diff-files li', { hasText: 'b.md' }).click();
+    await page.locator('#diff-files .dt.file', { hasText: 'b.md' }).click();
     await expect(page.locator('#diff-dlg .dl.add')).toContainText('B1');
     expect(search(page).get('dpath')).toBe('b.md');
   });

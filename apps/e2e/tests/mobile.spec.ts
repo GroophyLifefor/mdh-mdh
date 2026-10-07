@@ -1,7 +1,7 @@
 // A phone: narrow screen, touch, no hovering. Runs in Chromium with a Pixel 7 profile (the "phone" project).
 // Real Safari / iOS is not covered here; try the deployed site on a real phone as well.
 import { devices, type Browser, type Page } from '@playwright/test';
-import { PASSWORD, agent, clickItem, createProject, expect, passwordsOf, register, registerAndCreate, showHistory, test, treeItem, typeInEditor, uniqueName } from './helpers';
+import { PASSWORD, agent, clickItem, createProject, expect, passwordsOf, register, registerAndCreate, showHistory, sourceDiff, test, treeItem, typeInEditor, uniqueName } from './helpers';
 
 const MIN_TARGET = 40;   // px: size of anything a finger has to hit
 
@@ -33,10 +33,31 @@ const tab = (page: Page, name: 'files' | 'editor' | 'history') => page.locator(`
 const rowMenu = async (page: Page, path: string) => { await page.locator(`#tree .node[data-path="${path}"] button[aria-label^="Actions"]`).tap(); await expect(page.locator('#row-menu')).toBeVisible(); };
 
 test.describe('on a phone', () => {
+  test('the landing page on a phone: one column, pictures inside the screen, big tap targets, no menu row', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#landing')).toBeVisible();
+    await expect(page.locator('.top-links')).toBeHidden();
+    await assertFits(page, 'landing page');
+    const w = page.viewportSize()!.width;
+    await page.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 500) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 80)); } });
+    for (const img of await page.locator('img.shot.only-light').all()) {
+      const b = (await img.boundingBox())!;
+      expect(b.x, 'picture starts on screen').toBeGreaterThanOrEqual(0);
+      expect(b.x + b.width, 'picture ends on screen').toBeLessThanOrEqual(w + 1);
+    }
+    const rows = await page.locator('.l-row').evaluateAll((els) => els.map((e) => getComputedStyle(e).gridTemplateColumns.split(' ').length));
+    expect(rows.every((n) => n === 1), 'sections are stacked').toBe(true);
+    await page.locator('.l-faq summary').first().tap();
+    await expect(page.locator('.l-faq details').first()).toHaveAttribute('open', '');
+    await page.locator('#landing-btn-2').scrollIntoViewIfNeeded();
+    await page.locator('#landing-btn-2').tap();
+    await expect(page.locator('#auth-dlg')).toBeVisible();
+  });
+
   test('home: register, create, search and delete a project with taps; everything fits', async ({ page }) => {
     await page.goto('/');
     await assertFits(page, 'landing');
-    await page.getByRole('button', { name: 'Get started' }).tap();
+    await page.locator('#landing-btn').tap();
     await assertFits(page, 'register dialog', '#auth-dlg');
     await page.locator('#au-user').fill(uniqueName());
     await page.locator('#au-pass').fill(PASSWORD);
@@ -121,6 +142,7 @@ test.describe('on a phone', () => {
   });
 
   test('the diff view fits the screen and its icon is easy to tap', async ({ page }) => {
+    await sourceDiff(page);
     const { id } = await registerAndCreate(page);
     await agent(page.request, id, (await passwordsOf(page, id)).rw).post('/upload', { files: [{ path: 'a.md', content: 'A1\n' + 'a very long line that does not fit on a phone screen at all, not even close '.repeat(4) }, { path: 'b.md', content: 'B1' }] });
     await page.reload();
@@ -129,9 +151,48 @@ test.describe('on a phone', () => {
     await page.locator('#history .change').first().getByRole('button', { name: /Show what changed/ }).tap();
     await expect(page.locator('#diff-dlg')).toBeVisible();
     await assertFits(page, 'diff dialog', '#diff-dlg');
+    for (const id of ['#diff-prev', '#diff-next']) {
+      const b = (await page.locator(id).boundingBox())!, g = (await page.locator(`${id} svg`).boundingBox())!;
+      expect(Math.abs((g.x + g.width / 2) - (b.x + b.width / 2)), `${id} arrow is centred`).toBeLessThan(1.5);
+    }
+    await expect(page.locator('#diff-which')).toContainText('1 / 2');
+    await expect(page.locator('#diff-files')).toBeHidden();                                // the list is behind the file name on a phone
+    await page.locator('#diff-which').tap();
+    await expect(page.locator('#diff-files .dt.file')).toHaveCount(2);
+    await assertFits(page, 'diff file list', '#diff-dlg');
+    const list = await page.locator('#diff-files').evaluate((e) => ({ scroll: e.scrollWidth, client: e.clientWidth }));
+    expect(list.scroll, 'the file list does not scroll sideways').toBeLessThanOrEqual(list.client);
+    for (const mark of await page.locator('#diff-files .mark').all()) expect(await mark.boundingBox()).not.toBeNull();
+    const dlgBox = (await page.locator('#diff-dlg').boundingBox())!;
+    for (const mark of await page.locator('#diff-files .mark').all()) { const b = (await mark.boundingBox())!; expect(b.x + b.width).toBeLessThanOrEqual(dlgBox.x + dlgBox.width); }   // the + marks are on screen
+    await page.locator('#diff-files .dt.file', { hasText: 'b.md' }).tap();
+    await expect(page.locator('#diff-which')).toContainText('2 / 2');
+    await expect(page.locator('#diff-files')).toBeHidden();                                // picking a file closes the list
+    await page.locator('#diff-next').isDisabled();
+    await page.locator('#diff-prev').tap();
+    await expect(page.locator('#diff-which')).toContainText('1 / 2');
+    await expect(page.locator('#diff-view .dl.add').nth(1)).toContainText('a very long line');
     const view = await page.locator('#diff-view').evaluate((e) => ({ scroll: e.scrollWidth, client: e.clientWidth }));
     expect(view.scroll).toBeGreaterThan(view.client);                                   // the long line scrolls inside the view
     await page.locator('#diff-dlg').screenshot({ path: process.env.SHOT_DIR ? `${process.env.SHOT_DIR}/diff-phone.png` : undefined });
+  });
+
+  test('the rich diff of a markdown file fits the phone, with a switch that is easy to tap', async ({ page }) => {
+    const { id } = await registerAndCreate(page);
+    const api = agent(page.request, id, (await passwordsOf(page, id)).rw);
+    const wide = '| a | b | c | d |\n|---|---|---|---|\n| ' + Array.from({ length: 4 }, () => 'a-very-long-unbreakable-cell-value-'.repeat(2)).join(' | ') + ' |\n';
+    await api.post('/files', { path: 'doc.md', kind: 'file', content: '# Title\n\nThe old sentence about caching.\n\n' + wide });
+    await api.put('/file', { path: 'doc.md', content: '# Title\n\nThe new sentence about caching and retries.\n\n' + wide + '\n## Added\n\nNew part.\n', baseVersion: 1 });
+    await page.reload();
+    await tab(page, 'history').tap();
+    await page.locator('#history .change').first().getByRole('button', { name: /Show what changed/ }).tap();
+    await expect(page.locator('#diff-view .rd-changed ins').first()).toBeVisible();
+    await assertFits(page, 'rich diff', '#diff-dlg');
+    const view = await page.locator('#diff-view').evaluate((e) => ({ scroll: e.scrollWidth, client: e.clientWidth }));
+    expect(view.scroll).toBeLessThanOrEqual(view.client + 1);                           // the wide table scrolls by itself, the view does not
+    await page.locator('#diff-dlg').screenshot({ path: process.env.SHOT_DIR ? `${process.env.SHOT_DIR}/rich-phone.png` : undefined });
+    await page.getByRole('button', { name: 'Source', exact: true }).tap();
+    await expect(page.locator('#diff-view .dl.add').first()).toBeVisible();
   });
 
   test('header: the project name shrinks to fit and every button is reachable', async ({ page }) => {

@@ -52,9 +52,10 @@ function backtrack(trace: Int32Array[], n: number, m: number, dEnd: number, offs
   return steps.reverse();
 }
 
-/** The rows of a line diff between two texts. */
-export function diffLines(before: string, after: string): { rows: Row[]; exact: boolean } {
-  const a = splitLines(before), b = splitLines(after);
+export type Op = { type: 'ctx' | 'add' | 'del'; a: number; b: number };   // a: index in the old list (-1 for an addition), b: index in the new list (-1 for a removal)
+
+/** Aligns two lists of strings: which items stay, which are removed from the old list, which are added in the new one. */
+export function align(a: string[], b: string[]): { ops: Op[]; exact: boolean } {
   let start = 0;
   while (start < a.length && start < b.length && a[start] === b[start]) start++;
   let endA = a.length, endB = b.length;
@@ -68,16 +69,25 @@ export function diffLines(before: string, after: string): { rows: Row[]; exact: 
     steps = [...midA.map(() => 'del' as const), ...midB.map(() => 'add' as const)];
   }
 
-  const rows: Row[] = [];
-  let o = 1, nn = 1;
-  for (let i = 0; i < start; i++) rows.push({ type: 'ctx', text: a[i]!, oldNo: o++, newNo: nn++ });
-  let ia = 0, ib = 0;
+  const ops: Op[] = [];
+  for (let i = 0; i < start; i++) ops.push({ type: 'ctx', a: i, b: i });
+  let ia = start, ib = start;
   for (const s of steps) {
-    if (s === 'ctx') { rows.push({ type: 'ctx', text: midA[ia]!, oldNo: o++, newNo: nn++ }); ia++; ib++; }
-    else if (s === 'del') { rows.push({ type: 'del', text: midA[ia]!, oldNo: o++, newNo: null }); ia++; }
-    else { rows.push({ type: 'add', text: midB[ib]!, oldNo: null, newNo: nn++ }); ib++; }
+    if (s === 'ctx') ops.push({ type: 'ctx', a: ia++, b: ib++ });
+    else if (s === 'del') ops.push({ type: 'del', a: ia++, b: -1 });
+    else ops.push({ type: 'add', a: -1, b: ib++ });
   }
-  for (let i = endA; i < a.length; i++) rows.push({ type: 'ctx', text: a[i]!, oldNo: o++, newNo: nn++ });
+  for (let k = 0; k < a.length - endA; k++) ops.push({ type: 'ctx', a: endA + k, b: endB + k });
+  return { ops, exact };
+}
+
+/** The rows of a line diff between two texts. */
+export function diffLines(before: string, after: string): { rows: Row[]; exact: boolean } {
+  const a = splitLines(before), b = splitLines(after);
+  const { ops, exact } = align(a, b);
+  const rows: Row[] = ops.map((op) => op.type === 'ctx' ? { type: 'ctx', text: a[op.a]!, oldNo: op.a + 1, newNo: op.b + 1 }
+    : op.type === 'del' ? { type: 'del', text: a[op.a]!, oldNo: op.a + 1, newNo: null }
+    : { type: 'add', text: b[op.b]!, oldNo: null, newNo: op.b + 1 });
   return { rows, exact };
 }
 

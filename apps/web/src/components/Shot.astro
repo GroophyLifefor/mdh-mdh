@@ -1,0 +1,6 @@
+---
+// A picture of the real app in two themes: only the one that matches the theme is shown (and, being lazy, loaded).
+const { name, width, height, alt, eager = false, class: extra = '' } = Astro.props;
+---
+<img class={`shot only-light ${extra}`} src={`/landing/${name}-light.jpg`} width={width} height={height} alt={alt} loading={eager ? 'eager' : 'lazy'} decoding="async" {...(eager ? { fetchpriority: 'high' } : {})} />
+<img class={`shot only-dark ${extra}`} src={`/landing/${name}-dark.jpg`} width={width} height={height} alt={alt} loading="lazy" decoding="async" />

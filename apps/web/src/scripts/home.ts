@@ -20,6 +20,8 @@ function render() {
   show('landing', !user);
   show('projects', !!user);
   show('login-btn', !user);
+  show('start-btn', !user);
+  document.body.classList.toggle('on-landing', !user);
   show('profile-btn', !!user);
   if (user) $('profile-btn').innerHTML = icon('user') + `<span class="t">${esc(user.username)}</span>`;
   renderList();
@@ -147,6 +149,8 @@ const onEnter = (id: string, fn: () => void) => $(id).addEventListener('keydown'
 toggleTheme($('theme-btn'));
 $('login-btn').onclick = () => openAuth('login');
 $('landing-btn').onclick = () => openAuth('register');
+$('landing-btn-2').onclick = () => openAuth('register');
+$('start-btn').onclick = () => openAuth('register');
 $('tab-login').onclick = () => setMode('login');
 $('tab-register').onclick = () => setMode('register');
 $('au-cancel').onclick = () => authDlg.close();

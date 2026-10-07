@@ -31,7 +31,7 @@ for (const theme of ['light', 'dark'] as const) {
 
     test('home: landing', async ({ page }) => {
       await page.goto('/');
-      await expect(page.getByRole('heading', { name: /Miracles/ })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /shared with your agents/ })).toBeVisible();
       await expect(page).toHaveScreenshot(`home-landing-${theme}.png`);
     });
 

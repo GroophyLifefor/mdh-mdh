@@ -4,7 +4,7 @@ test.describe('accounts and the project list', () => {
   test('a visitor sees the landing page and can register, log out and log in again', async ({ page }) => {
     const problems = watchProblems(page);
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /Miracles Don't Happen/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /shared with your agents/ })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible();
     await expect(page.locator('#projects')).toBeHidden();
 
@@ -14,7 +14,7 @@ test.describe('accounts and the project list', () => {
 
     await page.locator('#profile-btn').click();
     await page.getByRole('button', { name: 'Log out' }).click();
-    await expect(page.getByRole('heading', { name: /Miracles Don't Happen/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /shared with your agents/ })).toBeVisible();
 
     await page.getByRole('button', { name: 'Log in' }).click();
     await page.locator('#au-user').fill(username.toUpperCase());      // usernames are not case sensitive
@@ -29,7 +29,7 @@ test.describe('accounts and the project list', () => {
     await page.locator('#profile-btn').click();
     await page.getByRole('button', { name: 'Log out' }).click();
 
-    await page.getByRole('button', { name: 'Get started' }).click();
+    await page.locator('#landing-btn').click();
     await page.locator('#au-user').fill(uniqueName());
     await page.locator('#au-pass').fill('short');
     await page.locator('#au-submit').click();

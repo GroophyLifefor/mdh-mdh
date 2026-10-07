@@ -39,7 +39,7 @@ export function contentSecurityPolicy(dir: string): string {
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const PROJECT_PAGE = new RegExp(`^/p(?:/(${UUID}|[^/]*))?/?$`);
 const CARD_PATH = new RegExp(`^/og/(default|${UUID})\\.png$`);
-const TAGLINE = 'Markdown and YAML workspaces. Share with a password. Roll back anything.';
+const TAGLINE = 'A workspace for you and your AI agents. Markdown and YAML in one place, every change kept, anything can be rolled back.';
 const PROJECT_DESCRIPTION = 'Shared workspace on mdh-mdh. Open the link and enter the password.';
 
 /** The address people use: PUBLIC_DOMAIN when set, else the one in this request (a plausible host name only). */

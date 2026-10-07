@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@12.9.1",
   "version": "0.1.0",
-  "description": "Miracles Don't Happen, Maybe Dreams Happen — self-hosted markdown & yaml workspaces",
+  "description": "a self-hosted workspace for markdown and yaml files that people and AI agents edit together",
   "scripts": {
     "dev": "pnpm -r --parallel --filter @mdh/server --filter @mdh/web dev",
     "dev:db": "./scripts/dev-db.sh",

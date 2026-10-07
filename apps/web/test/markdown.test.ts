@@ -4,7 +4,7 @@ import fc from 'fast-check';
 import { renderMarkdown } from '../src/lib/markdown';
 
 const ALLOWED_TAGS = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'UL', 'OL', 'LI', 'A', 'EM', 'STRONG', 'CODE', 'PRE', 'SPAN', 'BLOCKQUOTE', 'HR', 'BR', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'DEL', 'INPUT', 'DIV']);
-const ALLOWED_ATTRS = new Set(['href', 'rel', 'target', 'class', 'align', 'start', 'type', 'checked', 'disabled', 'data-mermaid']);
+const ALLOWED_ATTRS = new Set(['href', 'rel', 'target', 'class', 'align', 'start', 'type', 'checked', 'disabled', 'data-mermaid', 'data-line']);
 
 /** Parses the rendered HTML and returns everything a browser could run or load. */
 function dangers(html: string): string[] {

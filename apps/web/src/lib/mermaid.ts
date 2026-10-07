@@ -33,7 +33,10 @@ function show(block: HTMLElement, pic: { url: string; width: number }) {
   img.alt = 'Diagram';
   img.width = pic.width;
   img.className = 'mermaid-img';
+  const resized = () => block.dispatchEvent(new CustomEvent('mdh-resized', { bubbles: true }));   // the preview just got taller: whoever keeps it aligned can look again
+  img.onload = resized;
   block.replaceChildren(img);
+  resized();
   block.dataset.state = 'done';
 }
 

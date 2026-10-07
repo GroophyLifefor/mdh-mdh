@@ -10,9 +10,12 @@ import { explain, lostAccess } from '../lib/errors';
 import { timeAgo } from '../lib/format';
 import { mergeHistory } from '../lib/history';
 import { hydrateIcons, icon } from '../lib/icons';
-import { renderMarkdown } from '../lib/markdown';
+import { renderMarkdownLines, renderMarkdownShowingImages } from '../lib/markdown';
+import { buildAnchors, lineToTop, topToLine, type Anchor } from '../lib/scrollsync';
+import { richDiff } from '../lib/richdiff';
 import { renderMermaid } from '../lib/mermaid';
 import { countChanges, diffLines, withContext } from '../lib/diff';
+import { buildRows, orderedPaths, parentsOf, summarize, type ChangedFile } from '../lib/difftree';
 import { join, nameError, parentOf } from '../lib/paths';
 import { $, copy, esc, initProfile, toast, toggleTheme } from '../lib/shared';
 import { sharePrompt } from '../lib/share';
@@ -536,6 +539,8 @@ function mountEditor(path: string, content: string) {
       ],
     }),
   });
+  view.scrollDOM.addEventListener('scroll', () => { if (view && !ours(view.scrollDOM)) syncPreviewToEditor(); }, { passive: true });
+  $('preview').scrollTop = 0;
   applyMode();
   renderPreview();
   updateStatus();
@@ -550,13 +555,70 @@ function applyMode() {
   $('editor').classList.toggle('split', md && mode === 'split');
   $('cm').classList.toggle('hidden', md && mode === 'preview');
   $('preview').classList.toggle('hidden', !md || mode === 'edit');
+  if (md && mode === 'split') requestAnimationFrame(syncPreviewToEditor);
 }
+window.addEventListener('resize', () => syncPreviewToEditor());
 
 function renderPreview() {
   if (current === null || isYaml(current) || !view) return;
-  $('preview').innerHTML = renderMarkdown(view.state.doc.toString());
+  $('preview').innerHTML = renderMarkdownLines(view.state.doc.toString());
   renderMermaid($('preview'));
+  syncPreviewToEditor();                                     // the new text may be taller or shorter: keep both where they were
 }
+
+// ---------- the editor and the preview scroll together (split mode) ----------
+const isSplit = () => $('editor').classList.contains('split');
+let scrollExpect: { el: HTMLElement; top: number; at: number } | null = null;
+
+/** Scrolls `el` to `top` (kept inside its range) and remembers it, so the scroll event this causes is not answered with another scroll. */
+function scrollTo(el: HTMLElement, top: number) {
+  const to = Math.max(0, Math.min(top, el.scrollHeight - el.clientHeight));
+  if (Math.abs(el.scrollTop - to) < 1) return;
+  scrollExpect = { el, top: to, at: performance.now() };
+  el.scrollTop = to;
+}
+/** True when this scroll event was caused by our own scrollTo (and so must not be mirrored back). */
+function ours(el: HTMLElement): boolean {
+  const e = scrollExpect;
+  if (!e || e.el !== el) return false;
+  scrollExpect = null;
+  return performance.now() - e.at < 200 && Math.abs(el.scrollTop - e.top) < 2;
+}
+const atBottom = (el: HTMLElement) => el.scrollHeight - el.clientHeight > 0 && el.scrollTop >= el.scrollHeight - el.clientHeight - 1;
+
+function previewAnchors(): Anchor[] {
+  const pv = $('preview');
+  const blocks = [...pv.querySelectorAll<HTMLElement>('[data-line]')].map((el) => ({ line: Number(el.dataset.line), top: el.offsetTop }));
+  return buildAnchors(blocks, view!.state.doc.lines, pv.scrollHeight);
+}
+/** The source line at the top of the editor, with a fraction for how far into that line it is (long lines wrap, so lines differ in height). */
+function editorTopLine(): number {
+  const v = view!, h = Math.max(0, v.scrollDOM.scrollTop - v.documentPadding.top);
+  const block = v.lineBlockAtHeight(h);
+  return v.state.doc.lineAt(block.from).number + Math.min(1, Math.max(0, (h - block.top) / Math.max(1, block.height)));
+}
+function scrollEditorToLine(line: number) {
+  const v = view!, n = Math.min(v.state.doc.lines, Math.max(1, Math.floor(line)));
+  const block = v.lineBlockAt(v.state.doc.line(n).from);
+  scrollTo(v.scrollDOM, v.documentPadding.top + block.top + (line - n) * block.height);
+}
+
+function syncPreviewToEditor() {
+  if (!view || !isSplit()) return;
+  const ed = view.scrollDOM, pv = $('preview');
+  if (ed.scrollTop <= 0) scrollTo(pv, 0);
+  else if (atBottom(ed)) scrollTo(pv, pv.scrollHeight);
+  else scrollTo(pv, lineToTop(editorTopLine(), previewAnchors()));
+}
+function syncEditorToPreview() {
+  if (!view || !isSplit()) return;
+  const ed = view.scrollDOM, pv = $('preview');
+  if (pv.scrollTop <= 0) scrollTo(ed, 0);
+  else if (atBottom(pv)) scrollTo(ed, ed.scrollHeight);
+  else scrollEditorToLine(topToLine(pv.scrollTop, previewAnchors()));
+}
+$('preview').addEventListener('scroll', () => { if (!ours($('preview'))) syncEditorToPreview(); }, { passive: true });
+$('preview').addEventListener('mdh-resized', () => syncPreviewToEditor());       // a diagram or picture finished drawing: the preview got taller
 
 function yamlStatus() {
   if (!view) return '';
@@ -749,14 +811,63 @@ async function loadOlder() {
 
 // ---------- the changes of one history entry ----------
 const MAX_DIFF_ROWS = 3000;
-const ACTION_LABEL = { created: 'new', updated: 'changed', deleted: 'deleted' } as const;
+const ACTION_LABEL = { created: 'new file', updated: 'changed file', deleted: 'deleted file' } as const;
+const ACTION_MARK = { created: '+', updated: '~', deleted: '−' } as const;
+let diffFiles: ChangedFile[] = [];
+const diffClosed = new Set<string>();
+
+/** A folder chain "a/b/c": the last folder stays readable, the part before it is dimmed and is what gets shortened when there is no room. */
+function chainLabel(label: string): string {
+  const cut = label.lastIndexOf('/');
+  if (cut < 0) return `<span class="label">${esc(label)}</span>`;
+  return `<span class="label chain"><span class="dim">${esc(label.slice(0, cut + 1))}</span><span class="last">${esc(label.slice(cut + 1))}</span></span>`;
+}
+
+/** The file list of the diff view: a tree like the Files panel, plus the "3 / 27" line with previous / next. */
+function renderDiffList() {
+  const box = $('diff-files');
+  box.innerHTML = '';
+  for (const r of buildRows(diffFiles, diffClosed)) {
+    const row = document.createElement('div');
+    row.style.paddingLeft = `${r.depth * 14 + 4}px`;
+    if (r.type === 'dir') {
+      row.className = 'dt dir';
+      row.title = r.path;
+      row.innerHTML = `${icon(r.closed ? 'chevron-right' : 'chevron-down', 14)}${icon('folder')}${chainLabel(r.label)}<span class="count">${r.count}</span>`;
+      row.onclick = () => { if (diffClosed.has(r.path)) diffClosed.delete(r.path); else diffClosed.add(r.path); renderDiffList(); };
+    } else {
+      row.className = 'dt file' + (r.path === diffState?.path ? ' sel' : '');
+      row.title = r.path;
+      row.dataset.path = r.path;
+      row.innerHTML = `<span style="width:14px;flex:none"></span>${icon('file')}<span class="label">${esc(r.name)}</span><span class="mark ${r.action}" title="${ACTION_LABEL[r.action]}">${ACTION_MARK[r.action]}</span>`;
+      row.onclick = () => { $('diff-dlg').classList.remove('pick'); if (diffState) void openDiff(diffState.seq, r.path); };
+    }
+    box.appendChild(row);
+  }
+  const order = orderedPaths(diffFiles);
+  const at = diffState?.path ? order.indexOf(diffState.path) : -1;
+  $('diff-summary').textContent = summarize(diffFiles);
+  $('diff-which').textContent = at >= 0 ? `${at + 1} / ${order.length} · ${diffState!.path!.slice(diffState!.path!.lastIndexOf('/') + 1)}` : '';
+  $('diff-which').title = diffState?.path ?? '';
+  $<HTMLButtonElement>('diff-prev').disabled = at <= 0;
+  $<HTMLButtonElement>('diff-next').disabled = at < 0 || at >= order.length - 1;
+}
+
+function stepDiff(by: number) {
+  if (!diffState) return;
+  const order = orderedPaths(diffFiles);
+  const to = order[order.indexOf(diffState.path ?? '') + by];
+  if (to !== undefined) void openDiff(diffState.seq, to);
+}
 
 async function openDiff(seq: number, path: string | null) {
   try {
     const detail = details.get(seq) ?? await files.change(projectId, seq);
     details.set(seq, detail);
-    const list = detail.files.filter((f) => f.kind === 'file');
-    const chosen = list.find((f) => f.path === path)?.path ?? list[0]?.path ?? null;
+    diffFiles = detail.files.filter((f) => f.kind === 'file').map((f) => ({ path: f.path, action: f.action }));
+    const chosen = diffFiles.find((f) => f.path === path)?.path ?? orderedPaths(diffFiles)[0] ?? null;
+    if (diffState?.seq !== seq) diffClosed.clear();
+    if (chosen) for (const dir of parentsOf(chosen)) diffClosed.delete(dir);       // the file you look at is always visible in the tree
     diffState = { seq, path: chosen };
     $('diff-title').textContent = `#${seq} · ${detail.summary}`;
     // an editing session is ONE entry (autosaves within 10 minutes merge): say so when the entry spans some time
@@ -764,17 +875,10 @@ async function openDiff(seq: number, path: string | null) {
     const span = ended.getTime() - started.getTime() < 500 ? ended.toLocaleString()
       : `edited between ${started.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} and ${ended.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}, ${ended.toLocaleDateString()}`;
     $('diff-meta').textContent = `${detail.actor.label} · ${span}`;
-    const ul = $('diff-files');
-    ul.innerHTML = '';
-    for (const f of list) {
-      const li = document.createElement('li');
-      li.className = f.path === chosen ? 'sel' : '';
-      li.innerHTML = `<span>${esc(f.path)}</span><span class="tag">${ACTION_LABEL[f.action]}</span>`;
-      li.onclick = () => void openDiff(seq, f.path);
-      ul.appendChild(li);
-    }
-    $('diff-files').classList.toggle('hidden', list.length <= 1);
-    $('diff-dlg').querySelector('.diff-body')!.classList.toggle('single', list.length <= 1);
+    const many = diffFiles.length > 1;
+    $('diff-nav').classList.toggle('hidden', !many);
+    $('diff-dlg').querySelector('.diff-body')!.classList.toggle('single', !many);
+    renderDiffList();
     const d = dlg('diff-dlg');
     if (!d.open) d.showModal();
     syncUrl();
@@ -786,6 +890,11 @@ async function openDiff(seq: number, path: string | null) {
   }
 }
 
+const DIFF_MODE_KEY = 'mdh_diffmode';
+const RICH_MAX = 300_000;      // characters per side; bigger texts are shown as lines
+const diffMode = (): 'rendered' | 'source' => { try { return localStorage.getItem(DIFF_MODE_KEY) === 'source' ? 'source' : 'rendered'; } catch { return 'rendered'; } };
+const setDiffMode = (m: 'rendered' | 'source') => { try { localStorage.setItem(DIFF_MODE_KEY, m); } catch { /* the choice just does not stick */ } };
+
 async function showFileDiff(seq: number, path: string | null) {
   const view = $('diff-view');
   if (path === null) { view.innerHTML = '<p class="note">This change only touched folders.</p>'; return; }
@@ -793,25 +902,82 @@ async function showFileDiff(seq: number, path: string | null) {
   try {
     const f = await files.changeFile(projectId, seq, path);
     if (diffState?.seq !== seq || diffState.path !== path) return;           // another file was picked meanwhile
-    const { rows, exact } = diffLines(f.before ?? '', f.after ?? '');
+    const before = f.before ?? '', after = f.after ?? '';
+    const isMarkdown = /\.md$/i.test(path);
+    const tooBig = before.length > RICH_MAX || after.length > RICH_MAX;
+    const rich = isMarkdown && !tooBig && diffMode() === 'rendered';
+
+    const bar = document.createElement('div');
+    bar.className = 'diff-viewbar';
+    const label = document.createElement('span');
+    label.className = 'note';
+    bar.appendChild(label);
+    if (isMarkdown) {
+      const seg = document.createElement('div');
+      seg.className = 'seg diff-mode';
+      for (const m of ['rendered', 'source'] as const) {
+        const b = document.createElement('button');
+        b.textContent = m === 'rendered' ? 'Rendered' : 'Source';
+        b.className = (m === 'rendered') === rich ? 'on' : '';
+        b.disabled = m === 'rendered' && tooBig;
+        b.title = b.disabled ? 'Too big to show as a page' : '';
+        b.onclick = () => { setDiffMode(m); void showFileDiff(seq, path); };
+        seg.appendChild(b);
+      }
+      bar.appendChild(seg);
+    }
+    view.replaceChildren(bar);
+
+    if (rich) {
+      let body: HTMLElement;
+      if (f.action === 'updated') {
+        const r = richDiff(before, after, document, () => renderMermaid(view));
+        body = r.root;
+        const parts = [r.changed && `${r.changed} changed`, r.added && `${r.added} added`, r.removed && `${r.removed} removed`].filter(Boolean);
+        label.textContent = `${path} · ${parts.length ? parts.join(' · ') : 'no visible change'}`;
+        if (!parts.length) body.insertAdjacentHTML('afterbegin', '<p class="note">The page reads the same (only spacing or markup details changed). Switch to Source to see them.</p>');
+      } else {
+        body = document.createElement('div');
+        body.className = 'preview rd';
+        body.innerHTML = renderMarkdownShowingImages(f.action === 'created' ? after : before);
+        label.textContent = `${path} · ${f.action === 'created' ? 'new file' : 'deleted file'}`;
+      }
+      view.appendChild(body);
+      renderMermaid(view);
+      return;
+    }
+
+    const { rows, exact } = diffLines(before, after);
     const { added, removed } = countChanges(rows);
+    label.innerHTML = `${esc(path)} · <span style="color:var(--ok)">+${added}</span> <span style="color:var(--danger)">−${removed}</span>${exact ? '' : ' · too different to match line by line: everything is shown as removed and added'}${isMarkdown && tooBig ? ' · too big to show as a page' : ''}`;
     const shown = withContext(rows);
-    const html: string[] = [`<p class="note">${esc(path)} · <span style="color:var(--ok)">+${added}</span> <span style="color:var(--danger)">−${removed}</span>${exact ? '' : ' · too different to match line by line: everything is shown as removed and added'}</p>`];
+    // a new file has only new line numbers, a deleted one only old ones: one number column then, not an empty one next to it
+    const both = f.action === 'updated';
+    const digits = String(Math.max(1, ...rows.map((r) => Math.max(r.oldNo ?? 0, r.newNo ?? 0)))).length;
+    const col = `calc(${digits}ch + 0.9rem)`;
+    view.style.setProperty('--no-cols', both ? `${col} ${col}` : col);
+    const html: string[] = [];
     let count = 0;
     for (const r of shown) {
       if (++count > MAX_DIFF_ROWS) { html.push(`<p class="note">… and ${shown.length - MAX_DIFF_ROWS} more lines. Download the file to see all of it.</p>`); break; }
       if (r.type === 'gap') html.push(`<div class="dl gap"><span>⋯ ${r.hidden} unchanged line${r.hidden === 1 ? '' : 's'}</span></div>`);
-      else html.push(`<div class="dl ${r.type}"><span class="no">${r.oldNo ?? ''}</span><span class="no">${r.newNo ?? ''}</span><span class="sign">${r.type === 'add' ? '+' : r.type === 'del' ? '−' : ''}</span><span>${esc(r.text)}</span></div>`);
+      else html.push(`<div class="dl ${r.type}">${both ? `<span class="no">${r.oldNo ?? ''}</span><span class="no">${r.newNo ?? ''}</span>` : `<span class="no">${(f.action === 'created' ? r.newNo : r.oldNo) ?? ''}</span>`}<span class="sign">${r.type === 'add' ? '+' : r.type === 'del' ? '−' : ''}</span><span>${esc(r.text)}</span></div>`);
     }
     if (!rows.length) html.push('<p class="note">The file is empty.</p>');
-    view.innerHTML = html.join('');
+    view.insertAdjacentHTML('beforeend', html.join(''));
   } catch (e) {
     view.innerHTML = '<p class="note">Could not load this file.</p>';
     fail(e);
   }
 }
 $('diff-close').onclick = () => dlg('diff-dlg').close();
-dlg('diff-dlg').addEventListener('close', () => { diffState = null; syncUrl(); });
+$('diff-prev').onclick = () => stepDiff(-1);
+$('diff-next').onclick = () => stepDiff(1);
+$('diff-which').onclick = () => { if (isMobile()) $('diff-dlg').classList.toggle('pick'); };   // on a phone the name opens the list
+dlg('diff-dlg').addEventListener('keydown', (e) => {
+  if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && diffFiles.length > 1) { e.preventDefault(); stepDiff(e.key === 'ArrowRight' ? 1 : -1); }   // up / down keep scrolling the diff
+});
+dlg('diff-dlg').addEventListener('close', () => { diffState = null; $('diff-dlg').classList.remove('pick'); syncUrl(); });
 
 let historyTimer = 0;
 /** After our own save: update the list a moment later (once, however many saves happened). */

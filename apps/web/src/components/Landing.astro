@@ -1,0 +1,150 @@
+---
+import Shot from './Shot.astro';
+const REPO = 'https://github.com/GroophyLifefor/mdh-mdh';
+---
+<div id="landing" class="landing hidden">
+  <section class="l-hero l-wrap">
+    <h1>Your workspace,<br />shared with your agents.</h1>
+    <p class="lead">mdh-mdh keeps your markdown and YAML in one quiet place. You and your AI agents write in the same files, every change is kept, and anything can be rolled back.</p>
+    <div class="l-cta">
+      <button id="landing-btn" class="primary big">Get started</button>
+      <a class="l-link" href="#agents">See how agents connect <span aria-hidden="true">→</span></a>
+    </div>
+    <p class="l-fine">Self-hosted · Markdown and YAML · Works on your phone</p>
+    <div class="l-hero-shot">
+      <div class="frame"><Shot name="app" width={1800} height={1140} eager alt="mdh-mdh open on a product handbook: the file tree on the left, a markdown spec in the editor and its rendered preview with a diagram on the right." /></div>
+    </div>
+  </section>
+
+  <section id="agents" class="l-section l-wrap">
+    <div class="l-row">
+      <div class="l-text">
+        <span class="eyebrow">Agents</span>
+        <h2>Hand a project to an agent with one paste.</h2>
+        <p>Share gives you a link, a password and a ready-made prompt. Paste it into Claude Code, Codex, Gemini or any agent that can make HTTP requests. It reads a short guide, learns the API and starts working in your files.</p>
+        <ul class="l-ticks">
+          <li><i data-icon="check" data-size="16"></i>No SDK, no plugin, nothing to install</li>
+          <li><i data-icon="check" data-size="16"></i>View-only or edit passwords, refreshed whenever you like</li>
+          <li><i data-icon="check" data-size="16"></i>Everything an agent changes carries its name</li>
+        </ul>
+      </div>
+      <div class="l-visual stack">
+        <div class="frame"><Shot name="share" width={1134} height={1095} alt="The Share dialog of a project: a link, a password and a prompt that tells an AI agent how to start." /></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="history" class="l-section l-wrap">
+    <div class="l-row flip">
+      <div class="l-text">
+        <span class="eyebrow">History</span>
+        <h2>See exactly what changed. Undo what you don't like.</h2>
+        <p>Every editing session becomes one entry, with who made it. Open it to read the change as a page: new sections in green, removed ones in red, changed words marked. Roll back to any point, even undo a rollback.</p>
+        <ul class="l-ticks">
+          <li><i data-icon="check" data-size="16"></i>Markdown is compared as a page, everything else line by line</li>
+          <li><i data-icon="check" data-size="16"></i>A link to a change opens the same view for a teammate</li>
+          <li><i data-icon="check" data-size="16"></i>Rolling back adds a new entry: nothing is ever erased</li>
+        </ul>
+      </div>
+      <div class="l-visual">
+        <div class="frame"><Shot name="diff" width={1215} height={1080} alt="The rendered diff of a spec edited by an agent called Claude Code: a new bullet in green, a diagram that gained a step, and the old diagram above it in red." /></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="l-section l-wrap">
+    <div class="l-row">
+      <div class="l-text">
+        <span class="eyebrow">Sharing</span>
+        <h2>A link and a password. No accounts to set up.</h2>
+        <p>People you work with open the link, enter a view or edit password and they are in. Until then, all they can see is the project's name.</p>
+        <ul class="l-ticks">
+          <li><i data-icon="check" data-size="16"></i>Refresh a password and the old one stops working at once</li>
+          <li><i data-icon="check" data-size="16"></i>The owner decides who may roll back</li>
+        </ul>
+      </div>
+      <div class="l-visual panel">
+        <div class="frame"><Shot name="gate" width={720} height={600} alt="The password prompt a visitor sees: the project's name and a field for the password." /></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="l-section l-wrap">
+    <div class="l-row flip">
+      <div class="l-text">
+        <span class="eyebrow">Editing</span>
+        <h2>Small on purpose.</h2>
+        <p>Markdown with a live preview, syntax highlighting and Mermaid diagrams. YAML with instant validation. Plain files you could open anywhere. No blocks, no proprietary format, nothing to learn.</p>
+        <ul class="l-ticks">
+          <li><i data-icon="check" data-size="16"></i>Saves by itself, also when you close the tab</li>
+          <li><i data-icon="check" data-size="16"></i>Editor and preview scroll together</li>
+          <li><i data-icon="check" data-size="16"></i>Download a file, a folder or the whole project</li>
+        </ul>
+      </div>
+      <div class="l-visual">
+        <div class="frame"><Shot name="yaml" width={1227} height={600} alt="A YAML settings file in the editor, with a green mark saying the YAML is valid." /></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="l-section l-wrap">
+    <div class="l-row">
+      <div class="l-text">
+        <span class="eyebrow">Mobile</span>
+        <h2>In your pocket, too.</h2>
+        <p>Files, Editor and History are one tap apart. Read a diagram, upload a file, review what the agent did on your way home.</p>
+      </div>
+      <div class="l-visual phone">
+        <div class="frame"><Shot name="phone" width={824} height={1678} alt="mdh-mdh on a phone: the preview of a spec with a diagram, and the Files, Editor and History tabs at the bottom." /></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how" class="l-section l-wrap">
+    <div class="l-head"><span class="eyebrow">How it works</span><h2>Three steps, no setup.</h2></div>
+    <ol class="l-steps">
+      <li><span class="n">1</span><h3>Create a project</h3><p>Give it a name. Write files, or drop in a folder of markdown and YAML.</p></li>
+      <li><span class="n">2</span><h3>Share it with your agent</h3><p>Open Share, copy the prompt and paste it into your agent.</p></li>
+      <li><span class="n">3</span><h3>Watch it work</h3><p>Changes show up in the history within seconds. Roll back anything you don't like.</p></li>
+    </ol>
+  </section>
+
+  <section class="l-section l-wrap">
+    <div class="l-self">
+      <div class="l-text">
+        <span class="eyebrow">Self-hosting</span>
+        <h2>Your server. Your files.</h2>
+        <p>One command starts the app and its PostgreSQL database. Put it behind your own domain and back it up like any other database.</p>
+      </div>
+      <pre class="l-code"><code>git clone {REPO}.git
+cd mdh-mdh &amp;&amp; cp .env.example .env
+docker compose up -d --build</code></pre>
+    </div>
+  </section>
+
+  <section id="faq" class="l-section l-wrap narrow">
+    <div class="l-head"><span class="eyebrow">Questions</span><h2>Good to know</h2></div>
+    <div class="l-faq">
+      <details><summary>What is mdh-mdh?</summary><p>A small, self-hosted workspace for markdown and YAML files, built so that people and AI agents can work in the same files, with every change kept and reversible.</p></details>
+      <details><summary>Which agents can use it?</summary><p>Any agent that can send HTTP requests. The prompt from Share points it to <a href="/llm.txt">/llm.txt</a>, a short guide that describes the whole API.</p></details>
+      <details><summary>Do my teammates need accounts?</summary><p>No. They open the link and enter a view or edit password. Only the owner of a project has an account.</p></details>
+      <details><summary>Can an agent break something?</summary><p>Every change is recorded and can be rolled back. A view-only password cannot change anything, and the owner can restrict who may roll back.</p></details>
+      <details><summary>What can I store, and how much?</summary><p>Markdown and YAML files in folders, up to 1 MB per file and 50 MB per project.</p></details>
+      <details><summary>Where does my data live?</summary><p>In the PostgreSQL database of the server you run it on. Nothing leaves it.</p></details>
+    </div>
+  </section>
+
+  <section class="l-final">
+    <div class="l-wrap">
+      <h2>Give your agents a place to work.</h2>
+      <button id="landing-btn-2" class="primary big">Get started</button>
+    </div>
+  </section>
+
+  <footer class="l-foot l-wrap">
+    <span class="brand-line">mdh-mdh</span>
+    <span class="spacer"></span>
+    <a href="/llm.txt">Agent guide</a>
+    <a href={REPO} rel="noopener">GitHub</a>
+  </footer>
+</div>

@@ -56,7 +56,7 @@ const mark = (x: number, y: number, size: number) =>
 
 export type Card = { title: string; subtitle: string };
 
-export const DEFAULT_CARD: Card = { title: 'Markdown and YAML workspaces', subtitle: 'Share with a password. Roll back anything.' };
+export const DEFAULT_CARD: Card = { title: 'A workspace for you and your agents', subtitle: 'Markdown and YAML. Every change kept.' };
 export const projectCard = (name: string): Card => ({
   title: canDraw(name) ? name : 'A shared workspace',
   subtitle: 'Protected workspace. Open the link and enter the password.',

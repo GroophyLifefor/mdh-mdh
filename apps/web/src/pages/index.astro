@@ -2,25 +2,24 @@
 import Base from '../layouts/Base.astro';
 import ProfileDialog from '../components/ProfileDialog.astro';
 import LogoMark from '../components/LogoMark.astro';
+import Landing from '../components/Landing.astro';
 ---
-<Base title="mdh-mdh">
+<Base title="mdh-mdh: a workspace for you and your agents">
   <header class="top">
     <div class="crumb"><a href="/" class="brand"><LogoMark />mdh-mdh</a></div>
+    <nav class="top-links" aria-label="Page sections"><a href="#agents">Agents</a><a href="#history">History</a><a href="#how">How it works</a><a href="#faq">FAQ</a></nav>
     <span class="spacer"></span>
     <button id="theme-btn" class="icon-btn"></button>
-    <button id="login-btn" class="primary hidden">Log in</button>
+    <button id="login-btn" class="outline hidden">Log in</button>
+    <button id="start-btn" class="primary hidden">Get started</button>
     <button id="profile-btn" class="hidden outline">Profile</button>
   </header>
+
+  <Landing />
 
   <main class="page">
     <section id="boot-err" class="banner hidden">
       <span id="boot-err-msg"></span><span class="spacer"></span><button id="boot-retry" class="outline">Try again</button>
-    </section>
-
-    <section id="landing" class="hero hidden">
-      <h1>Miracles Don't Happen,<br />Maybe Dreams Happen</h1>
-      <p>Write markdown and yaml together. Share with a password. Roll back anything.</p>
-      <button id="landing-btn" class="primary">Get started</button>
     </section>
 
     <section id="projects" class="hidden">

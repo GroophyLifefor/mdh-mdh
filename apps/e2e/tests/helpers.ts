@@ -31,7 +31,7 @@ export const PASSWORD = 'longenough';
 /** Registers through the UI and lands on the (empty) project list. */
 export async function register(page: Page, username = uniqueName()) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Get started' }).click();
+  await page.locator('#landing-btn').click();
   await page.locator('#au-user').fill(username);
   await page.locator('#au-pass').fill(PASSWORD);
   await page.getByRole('button', { name: 'Create account' }).click();
@@ -96,4 +96,9 @@ export function watchProblems(page: Page) {
   page.on('console', (m) => { if (/Content Security Policy|violat/i.test(m.text())) problems.push('CSP: ' + m.text()); });
   page.on('pageerror', (e) => problems.push('page error: ' + e.message));
   return problems;
+}
+
+/** The diff view shows lines (not the rendered page) for this browser: for tests that check the line rows. */
+export async function sourceDiff(page: Page) {
+  await page.addInitScript(() => { try { localStorage.setItem('mdh_diffmode', 'source'); } catch { /* ignore */ } });
 }
