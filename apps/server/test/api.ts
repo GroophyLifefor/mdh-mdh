@@ -24,6 +24,7 @@ export function api(app: App, projectId: string, auth: Auth) {
     upload: (files: { path: string; content: string }[], opts: { folders?: string[]; overwrite?: boolean } = {}) => h(request(app).post(`${base}/upload`).send({ files, ...opts })),
     history: (query: Record<string, string | number> = {}) => h(request(app).get(`${base}/history`).query(query)),
     change: (seq: number | string) => h(request(app).get(`${base}/history/${seq}`)),
+    changeFile: (seq: number | string, path: string) => h(request(app).get(`${base}/history/${seq}/file`).query({ path })),
     rollback: (seq: number | string) => h(request(app).post(`${base}/history/${seq}/rollback`)),
   };
 }

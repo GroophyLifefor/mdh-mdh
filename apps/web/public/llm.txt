@@ -42,6 +42,7 @@ All paths below start with /api/projects/<id>. Replace <id> with project.id.
     POST   /api/projects/:id/upload
     GET    /api/projects/:id/history
     GET    /api/projects/:id/history/:seq
+    GET    /api/projects/:id/history/:seq/file
     POST   /api/projects/:id/history/:seq/rollback
 
 ### GET /api/projects/:id
@@ -100,6 +101,10 @@ kind is edit, create, rename, delete, upload or rollback. For the next page send
 
 ### GET /api/projects/:id/history/:seq
 One change with the paths it touched (no file content): { "change": { ...as above, "files": [ { "path", "kind", "action": "created" | "updated" | "deleted" } ] } }
+
+### GET /api/projects/:id/history/:seq/file?path=notes/spec.md
+One file as it was before and after that change: { "file": { "path", "action": "created" | "updated" | "deleted", "before": <text> | null, "after": <text> | null } }.
+before is null for a created file, after is null for a deleted one. 404 if the change did not touch that file (or the path is a folder).
 
 ### POST /api/projects/:id/history/:seq/rollback
 Restores the whole project to how it was right after change #seq. History is never rewritten: this adds a NEW change

@@ -113,6 +113,12 @@ import LogoMark from '../../components/LogoMark.astro';
     <div class="actions"><button id="s-close" class="primary">Done</button></div>
   </dialog>
 
+  <dialog id="diff-dlg" class="diff">
+    <div class="diff-head"><h2 id="diff-title"></h2><button id="diff-close" class="icon-btn" aria-label="Close"><i data-icon="x"></i></button></div>
+    <p class="muted" id="diff-meta"></p>
+    <div class="diff-body"><ul id="diff-files" class="diff-files"></ul><div id="diff-view" class="diff-view"></div></div>
+  </dialog>
+
   <dialog id="switch-dlg">
     <h2>Your projects</h2>
     <ul id="switch-list" class="list"></ul>

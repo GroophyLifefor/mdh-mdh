@@ -1,7 +1,7 @@
 // A phone: narrow screen, touch, no hovering. Runs in Chromium with a Pixel 7 profile (the "phone" project).
 // Real Safari / iOS is not covered here; try the deployed site on a real phone as well.
 import { devices, type Browser, type Page } from '@playwright/test';
-import { PASSWORD, clickItem, createProject, expect, passwordsOf, register, registerAndCreate, showHistory, test, treeItem, typeInEditor, uniqueName } from './helpers';
+import { PASSWORD, agent, clickItem, createProject, expect, passwordsOf, register, registerAndCreate, showHistory, test, treeItem, typeInEditor, uniqueName } from './helpers';
 
 const MIN_TARGET = 40;   // px: size of anything a finger has to hit
 
@@ -118,6 +118,20 @@ test.describe('on a phone', () => {
     const img = (await page.locator('#preview img.mermaid-img').boundingBox())!;
     expect(img.x + img.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
     await page.locator('#preview').screenshot({ path: process.env.SHOT_DIR ? `${process.env.SHOT_DIR}/mermaid-phone.png` : undefined });
+  });
+
+  test('the diff view fits the screen and its icon is easy to tap', async ({ page }) => {
+    const { id } = await registerAndCreate(page);
+    await agent(page.request, id, (await passwordsOf(page, id)).rw).post('/upload', { files: [{ path: 'a.md', content: 'A1\n' + 'a very long line that does not fit on a phone screen at all, not even close '.repeat(4) }, { path: 'b.md', content: 'B1' }] });
+    await page.reload();
+    await tab(page, 'history').tap();
+    await assertFits(page, 'history with diff icons');
+    await page.locator('#history .change').first().getByRole('button', { name: /Show what changed/ }).tap();
+    await expect(page.locator('#diff-dlg')).toBeVisible();
+    await assertFits(page, 'diff dialog', '#diff-dlg');
+    const view = await page.locator('#diff-view').evaluate((e) => ({ scroll: e.scrollWidth, client: e.clientWidth }));
+    expect(view.scroll).toBeGreaterThan(view.client);                                   // the long line scrolls inside the view
+    await page.locator('#diff-dlg').screenshot({ path: process.env.SHOT_DIR ? `${process.env.SHOT_DIR}/diff-phone.png` : undefined });
   });
 
   test('header: the project name shrinks to fit and every button is reachable', async ({ page }) => {

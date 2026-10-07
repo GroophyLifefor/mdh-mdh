@@ -15,5 +15,7 @@ export type ChangeInfo = {
 };
 export type ChangeDetail = ChangeInfo & { files: { path: string; kind: 'dir' | 'file'; action: 'created' | 'updated' | 'deleted' }[] };
 
+export type ChangeFile = { path: string; action: 'created' | 'updated' | 'deleted'; before: string | null; after: string | null };
+
 export type SaveResult = { unchanged: true; version: number } | { unchanged: false; version: number; seq: number; merged: boolean };
 export type UploadResult = { created: number; updated: number; unchanged: number; newFolders: number; seq: number | null };

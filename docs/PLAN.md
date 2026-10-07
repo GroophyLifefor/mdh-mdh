@@ -41,7 +41,7 @@ Testing is a separate document: [TESTING.md](TESTING.md).
 | config | `GET /config` (public: `{ publicUrl }`) |
 | public | `GET /projects/:id/public` (the name only; anyone who knows the id) |
 | files | `GET /projects/:id/tree`, `GET /projects/:id/download?path=` (a file, a folder as .zip, or no path: the whole project as .zip), `GET /projects/:id/file?path=`, `PUT /projects/:id/file`, `POST /projects/:id/files` (create), `POST /projects/:id/move`, `DELETE /projects/:id/file?path=`, `POST /projects/:id/upload` |
-| history | `GET /projects/:id/history`, `GET /projects/:id/history/:seq`, `POST /projects/:id/history/:seq/rollback` |
+| history | `GET /projects/:id/history`, `GET /projects/:id/history/:seq`, `GET /projects/:id/history/:seq/file?path=` (one file before / after, for the diff view), `POST /projects/:id/history/:seq/rollback` |
 
 `/llm.txt` describes this API for agents and is checked against the real routes by a contract test.
 
@@ -85,6 +85,12 @@ Testing is a separate document: [TESTING.md](TESTING.md).
 
 Chat apps fetch a pasted link without cookies, so the server fills the `<head>` of the pages at request time (`services/head.ts`): `og:*`, `twitter:card=summary_large_image`, `description`, and for `/p/<id>` the project name (escaped) with `noindex`. Absolute urls come from `PUBLIC_DOMAIN`, else from the request's Host (only a plausible host name is trusted). `GET /og/<id>.png` and `/og/default.png` draw a 1200 x 630 card with `@resvg/resvg-js` and Inter (`apps/server/assets/fonts`, SIL OFL); renders are cached in memory (200 entries, key = id + name, so a rename shows at once), an unknown id costs no render. Names the font cannot draw (other scripts, emoji) get a plain card; the `og:title` still carries the real name. The brand mark is `favicon.svg`, `apple-touch-icon.png` and the `LogoMark` component (follows the theme); the original `logo*.svg` files are left untouched (they embed c2pa metadata and fixed black strokes).
 
+## Links and the diff view
+
+The address follows what is open: `/p/<id>?file=notes/a.md` (written with `replaceState`, so the back button is not filled), and `?diff=<seq>&dpath=<file>` for the diff modal. A person with the link goes through the password gate first (any password: looking at a diff is a read), then lands on the same view. `GET /history/:seq/file` gives one file's `before` and `after` (null where it did not exist; folders have none); one file at a time keeps the answer small (an upload can touch 200 files of 1 MB). The diff is drawn by `lib/diff.ts` (own Myers line diff, 3 lines of context; two completely different big files fall back to "all removed, all added"). A final line break does not count as an extra line.
+
+Because autosaves of one person in one file within 10 minutes are ONE history entry, a diff shows the net change of that editing session, and the link of the newest entry can still grow while the session lasts. The modal says "edited between 12:01 and 12:09" when an entry spans time. Rejected: freezing an entry when its link is copied (a view-only visitor would write), keeping a snapshot per autosave (the database growth we avoided).
+
 ## Mermaid diagrams
 
 A ```mermaid block in the preview is drawn by `apps/web/src/lib/mermaid.ts`. The library loads only when a block exists (own chunks, same origin, so the CSP is unchanged). Two layers keep other people's diagrams harmless: mermaid's `securityLevel: 'strict'`, and the result is shown as `<img src="data:image/svg+xml,...">`, where an SVG can never run a script. Results are cached per theme + source; a theme change draws them again. Limits: text inside a diagram cannot be selected, a very wide diagram is scaled down to the screen, only the common types were tried (flow, sequence, class, state, ER, gantt, pie).
@@ -103,6 +109,7 @@ In production ONE process serves the API and the built website, so one domain (o
 - The rate limiter is per process.
 - Changes by other people are noticed by looking every 10 s, not instantly (no websockets).
 - Dropping a real folder works through the browser's `webkitGetAsEntry`; it is unit tested with fake entries but has not been tried with a real drop.
+- The diff of a very long file shows at most 3000 rows; a final line break added at the end of a file is not shown as a change.
 - Link cards are tested against our own HTML and PNG, not against real Slack / WhatsApp / Discord (they also cache cards for a long time).
 - Not tried: a build on another machine / CPU architecture, or behind a real reverse proxy.
 - No git repository yet; nothing is committed or pushed.

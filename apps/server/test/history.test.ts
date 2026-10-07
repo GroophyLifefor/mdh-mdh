@@ -91,6 +91,39 @@ describe('history', () => {
     });
   });
 
+  describe('one file of a change (diff view)', () => {
+    it('gives the text before and after, and null where the file did not exist', async () => {
+      const w = await world(t);
+      await w.asOwner.create('n.md');
+      await w.asOwner.save('n.md', 'first', 1);
+      await w.asOwner.save('n.md', 'second', 2);                          // same person within 10 min: merged into one entry
+      const created = (await w.asRo.changeFile(2, 'n.md')).body.file;
+      expect(created).toEqual({ path: 'n.md', action: 'created', before: null, after: '' });
+      const edit = (await w.asRo.changeFile(3, 'n.md')).body.file;
+      expect(edit).toEqual({ path: 'n.md', action: 'updated', before: '', after: 'second' });
+      await w.asOwner.del('n.md');
+      const gone = (await w.asRo.changeFile(4, 'n.md')).body.file;
+      expect(gone).toEqual({ path: 'n.md', action: 'deleted', before: 'second', after: null });
+    });
+    it('404 for a file the change did not touch, a folder, an unknown change; 400 for a bad path or seq', async () => {
+      const w = await world(t);
+      await w.asOwner.upload([{ path: 'x/a.md', content: 'A' }]);
+      expect((await w.asOwner.changeFile(2, 'readme.md')).status).toBe(404);
+      expect((await w.asOwner.changeFile(2, 'x')).status).toBe(404);          // a folder has no content
+      expect((await w.asOwner.changeFile(99, 'x/a.md')).status).toBe(404);
+      expect((await w.asOwner.changeFile(2, '../etc/passwd')).status).toBe(400);
+      expect((await w.asOwner.changeFile('abc', 'x/a.md')).status).toBe(400);
+      expect((await request(w.app).get(`/api/projects/${w.p.id}/history/2/file`).set(bearer(w.p.ro))).status).toBe(400);   // path missing
+    });
+    it('never shows another project\'s change', async () => {
+      const a = await world(t), b = await world(t);
+      await b.asOwner.upload([{ path: 'secret.md', content: 'OTHER' }]);
+      const res = await a.asOwner.changeFile(2, 'secret.md');
+      expect(res.status).toBe(404);
+      expect(JSON.stringify(res.body)).not.toContain('OTHER');
+    });
+  });
+
   describe('access', () => {
     it('is readable with any access and with nothing else', async () => {
       const w = await world(t);

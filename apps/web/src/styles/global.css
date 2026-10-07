@@ -291,3 +291,41 @@ button.danger-solid:disabled { opacity: .4; }
 #row-menu button { width: 100%; justify-content: flex-start; gap: 0.8rem; min-height: 48px; padding: 0 0.8rem; font-size: 1rem; }
 #row-menu a.menu-link { display: flex; align-items: center; gap: 0.8rem; min-height: 48px; padding: 0 0.8rem; border-radius: 0.5333rem; text-decoration: none; color: var(--text); }
 #row-menu a.menu-link:hover { background: var(--hover); }
+
+/* diff view (history) */
+.change { position: relative; padding-right: 2.6rem; }
+.change .diff-btn { position: absolute; right: 0.3rem; top: 0.25rem; width: 2rem; height: 2rem; color: var(--muted); }
+.change .diff-btn:hover { color: var(--text); }
+dialog.diff { width: min(70rem, 94vw); height: min(90dvh, 52rem); flex-direction: column; }
+dialog.diff[open] { display: flex; }
+.diff-head { display: flex; align-items: center; gap: 0.5rem; }
+.diff-head h2 { flex: 1; margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.diff-body { flex: 1; display: grid; grid-template-columns: minmax(10rem, 16rem) 1fr; gap: 0.8rem; min-height: 0; margin-top: 0.4rem; }
+.diff-body.single { grid-template-columns: 1fr; }
+.diff-files { list-style: none; margin: 0; padding: 0; overflow: auto; border: 1px solid var(--border); border-radius: 0.6667rem; align-self: start; max-height: 100%; }
+.diff-files li { padding: 0.45rem 0.7rem; cursor: pointer; font-size: 0.8667rem; overflow-wrap: anywhere; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem; align-items: baseline; }
+.diff-files li:last-child { border-bottom: 0; }
+.diff-files li.sel { background: var(--sel); font-weight: 600; }
+.diff-files .tag { font-size: 0.75rem; color: var(--muted); flex: none; }
+.diff-view { overflow: auto; border: 1px solid var(--border); border-radius: 0.6667rem; font: 0.8rem/1.55 ui-monospace, 'SF Mono', Menlo, monospace; min-width: 0; }
+.diff-view .note { padding: 0.8rem 1rem; color: var(--muted); font-family: var(--font, inherit); }
+.dl { display: grid; grid-template-columns: 3.2rem 3.2rem 1.2rem 1fr; min-width: max-content; }
+.dl > span { padding: 0 0.4rem; white-space: pre; }
+.dl .no { color: var(--muted); text-align: right; user-select: none; }
+.dl .sign { text-align: center; user-select: none; }
+.dl.add { background: color-mix(in srgb, var(--ok) 16%, transparent); }
+.dl.del { background: color-mix(in srgb, var(--danger) 16%, transparent); }
+.dl.gap { background: var(--page); color: var(--muted); }
+.dl.gap > span { grid-column: 1 / -1; padding: 0.15rem 0.8rem; }
+@media (max-width: 800px) {
+  dialog.diff { width: calc(100vw - 1.2rem); height: calc(100dvh - 1.2rem); }
+  .diff-body, .diff-body.single { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .diff-body.single { grid-template-rows: 1fr; }
+  .diff-files { max-height: 9rem; }
+  .diff-files li { min-height: 44px; align-items: center; }
+  .change .diff-btn { width: 44px; height: 44px; top: 0; right: 0; }
+  .change { padding-right: 2.8rem; }
+}
+
+/* the browser's own blue tap flash would paint over dialogs; rows and buttons have their own hover/active colours */
+.change, button { -webkit-tap-highlight-color: transparent; }

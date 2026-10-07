@@ -89,6 +89,7 @@ export const ROWS: Row[] = [
   { route: 'GET /api/projects/:id/download', method: 'get', url: (f) => `/api/projects/${f.p.id}/download?path=readme.md`, expect: readers(200) },
   { route: 'GET /api/projects/:id/history', method: 'get', url: (f) => `/api/projects/${f.p.id}/history`, expect: readers(200) },
   { route: 'GET /api/projects/:id/history/:seq', method: 'get', url: (f) => `/api/projects/${f.p.id}/history/1`, expect: readers(200) },
+  { route: 'GET /api/projects/:id/history/:seq/file', method: 'get', url: (f) => `/api/projects/${f.p.id}/history/1/file?path=readme.md`, expect: readers(200) },
   { route: 'POST /api/projects/:id/history/:seq/rollback', method: 'post', url: (f) => `/api/projects/${f.p.id}/history/1/rollback`, expect: writers(200), fresh: true, setup: makeEdit },
   { route: 'GET /api/access', method: 'get', url: () => '/api/access', expect: { ...everyone(401), rwBearer: 200, roBearer: 200, foreignBearer: 200 } },
   { route: 'PATCH /api/auth/me', method: 'patch', url: () => '/api/auth/me', body: () => ({ defaultRollbackPolicy: 'author_only' }), expect: signedIn(200) },

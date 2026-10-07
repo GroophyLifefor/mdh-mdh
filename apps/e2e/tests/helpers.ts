@@ -46,7 +46,7 @@ export async function createProject(page: Page, name: string) {
   await page.getByRole('button', { name: 'Create', exact: true }).click();
   await page.waitForURL(/\/p\/[0-9a-f-]{36}$/);
   await expect(page.locator('#bar .name')).toHaveText('readme.md');
-  return page.url().split('/p/')[1]!;
+  return new URL(page.url()).pathname.split('/')[2]!;
 }
 
 export async function registerAndCreate(page: Page, projectName = 'My notes') {

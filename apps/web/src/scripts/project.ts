@@ -12,6 +12,7 @@ import { mergeHistory } from '../lib/history';
 import { hydrateIcons, icon } from '../lib/icons';
 import { renderMarkdown } from '../lib/markdown';
 import { renderMermaid } from '../lib/mermaid';
+import { countChanges, diffLines, withContext } from '../lib/diff';
 import { join, nameError, parentOf } from '../lib/paths';
 import { $, copy, esc, initProfile, toast, toggleTheme } from '../lib/shared';
 import { sharePrompt } from '../lib/share';
@@ -440,10 +441,26 @@ function discardEditor() {
   autosave = null;
 }
 
+// ---------- the address follows what is open ----------
+// /p/<id>?file=notes/a.md opens that file, &diff=12&dpath=notes/a.md opens the changes of entry #12. Someone who gets the link
+// needs access like for any page of the project (they are asked for the password first), then lands on the same view.
+const startParams = new URLSearchParams(location.search);
+let wantFile = startParams.get('file');
+let wantDiff = Number(startParams.get('diff')) > 0 ? { seq: Number(startParams.get('diff')), path: startParams.get('dpath') } : null;
+let diffState: { seq: number; path: string | null } | null = null;
+function syncUrl() {
+  const q = new URLSearchParams();
+  if (current) q.set('file', current);
+  if (diffState) { q.set('diff', String(diffState.seq)); if (diffState.path) q.set('dpath', diffState.path); }
+  const qs = q.toString();
+  try { window.history.replaceState(null, '', location.pathname + (qs ? `?${qs}` : '')); } catch { /* the address just stays as it is */ }
+}
+
 function closeEditor() {
   discardEditor();
   view?.destroy(); view = null;
   current = null;
+  syncUrl();
   hideNotice();
   renderTree();
   renderBar();
@@ -459,6 +476,7 @@ async function openFile(path: string, opts: { force?: boolean } = {}) {
     const f = await files.read(projectId, path);
     discardEditor();
     current = path;
+    syncUrl();
     currentVersion = f.version;
     selDir = parentOf(path);
     expandTo(selDir);
@@ -670,7 +688,8 @@ function renderHistory() {
   for (const c of history) {
     const el = document.createElement('div');
     el.className = 'change' + (c.seq === selSeq ? ' sel' : '');
-    el.innerHTML = `<div class="muted meta">${c.seq === selSeq ? '<span class="dot"></span>' : ''}#${c.seq} · ${esc(c.actor.label)} · <span title="${esc(new Date(c.updatedAt).toLocaleString())}">${esc(timeAgo(c.updatedAt))}</span></div><div class="summary">${esc(c.summary)}</div>`;
+    el.innerHTML = `<div class="muted meta">${c.seq === selSeq ? '<span class="dot"></span>' : ''}#${c.seq} · ${esc(c.actor.label)} · <span title="${esc(new Date(c.updatedAt).toLocaleString())}">${esc(timeAgo(c.updatedAt))}</span></div><div class="summary">${esc(c.summary)}</div><button class="icon-btn diff-btn" title="Show what changed" aria-label="Show what changed in #${c.seq}">${icon('diff', 16)}</button>`;
+    el.querySelector<HTMLElement>('.diff-btn')!.onclick = (e) => { e.stopPropagation(); void openDiff(c.seq, null); };
     if (c.seq === selSeq) {
       const d = details.get(c.seq);
       if (d) {
@@ -727,6 +746,72 @@ async function loadOlder() {
     renderHistory();
   } catch (e) { fail(e); }
 }
+
+// ---------- the changes of one history entry ----------
+const MAX_DIFF_ROWS = 3000;
+const ACTION_LABEL = { created: 'new', updated: 'changed', deleted: 'deleted' } as const;
+
+async function openDiff(seq: number, path: string | null) {
+  try {
+    const detail = details.get(seq) ?? await files.change(projectId, seq);
+    details.set(seq, detail);
+    const list = detail.files.filter((f) => f.kind === 'file');
+    const chosen = list.find((f) => f.path === path)?.path ?? list[0]?.path ?? null;
+    diffState = { seq, path: chosen };
+    $('diff-title').textContent = `#${seq} · ${detail.summary}`;
+    // an editing session is ONE entry (autosaves within 10 minutes merge): say so when the entry spans some time
+    const started = new Date(detail.createdAt), ended = new Date(detail.updatedAt);
+    const span = ended.getTime() - started.getTime() < 500 ? ended.toLocaleString()
+      : `edited between ${started.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} and ${ended.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}, ${ended.toLocaleDateString()}`;
+    $('diff-meta').textContent = `${detail.actor.label} · ${span}`;
+    const ul = $('diff-files');
+    ul.innerHTML = '';
+    for (const f of list) {
+      const li = document.createElement('li');
+      li.className = f.path === chosen ? 'sel' : '';
+      li.innerHTML = `<span>${esc(f.path)}</span><span class="tag">${ACTION_LABEL[f.action]}</span>`;
+      li.onclick = () => void openDiff(seq, f.path);
+      ul.appendChild(li);
+    }
+    $('diff-files').classList.toggle('hidden', list.length <= 1);
+    $('diff-dlg').querySelector('.diff-body')!.classList.toggle('single', list.length <= 1);
+    const d = dlg('diff-dlg');
+    if (!d.open) d.showModal();
+    syncUrl();
+    await showFileDiff(seq, chosen);
+  } catch (e) {
+    diffState = null; syncUrl();
+    if (dlg('diff-dlg').open) dlg('diff-dlg').close();
+    if (e instanceof ApiError && e.status === 404) toast(`Change #${seq} does not exist.`); else fail(e);
+  }
+}
+
+async function showFileDiff(seq: number, path: string | null) {
+  const view = $('diff-view');
+  if (path === null) { view.innerHTML = '<p class="note">This change only touched folders.</p>'; return; }
+  view.innerHTML = '<p class="note">Loading…</p>';
+  try {
+    const f = await files.changeFile(projectId, seq, path);
+    if (diffState?.seq !== seq || diffState.path !== path) return;           // another file was picked meanwhile
+    const { rows, exact } = diffLines(f.before ?? '', f.after ?? '');
+    const { added, removed } = countChanges(rows);
+    const shown = withContext(rows);
+    const html: string[] = [`<p class="note">${esc(path)} · <span style="color:var(--ok)">+${added}</span> <span style="color:var(--danger)">−${removed}</span>${exact ? '' : ' · too different to match line by line: everything is shown as removed and added'}</p>`];
+    let count = 0;
+    for (const r of shown) {
+      if (++count > MAX_DIFF_ROWS) { html.push(`<p class="note">… and ${shown.length - MAX_DIFF_ROWS} more lines. Download the file to see all of it.</p>`); break; }
+      if (r.type === 'gap') html.push(`<div class="dl gap"><span>⋯ ${r.hidden} unchanged line${r.hidden === 1 ? '' : 's'}</span></div>`);
+      else html.push(`<div class="dl ${r.type}"><span class="no">${r.oldNo ?? ''}</span><span class="no">${r.newNo ?? ''}</span><span class="sign">${r.type === 'add' ? '+' : r.type === 'del' ? '−' : ''}</span><span>${esc(r.text)}</span></div>`);
+    }
+    if (!rows.length) html.push('<p class="note">The file is empty.</p>');
+    view.innerHTML = html.join('');
+  } catch (e) {
+    view.innerHTML = '<p class="note">Could not load this file.</p>';
+    fail(e);
+  }
+}
+$('diff-close').onclick = () => dlg('diff-dlg').close();
+dlg('diff-dlg').addEventListener('close', () => { diffState = null; syncUrl(); });
 
 let historyTimer = 0;
 /** After our own save: update the list a moment later (once, however many saves happened). */
@@ -941,9 +1026,13 @@ async function boot() {
     history = []; nextBefore = null; details.clear(); selSeq = null;
     await refreshAll();
     started = true;
-    if (!current && nodes.some((n) => n.path === 'readme.md')) await openFile('readme.md');
-    else if (!current) { closeEditor(); if (isMobile()) setTab('files'); }
+    const asked = wantFile; wantFile = null;
+    const askedDiff = wantDiff; wantDiff = null;
+    if (asked && !current && nodes.some((n) => n.path === asked && n.kind === 'file')) await openFile(asked);
+    else if (!current && nodes.some((n) => n.path === 'readme.md')) { if (asked) toast(`"${asked}" does not exist (any more).`); await openFile('readme.md'); }
+    else if (!current) { if (asked) toast(`"${asked}" does not exist (any more).`); closeEditor(); if (isMobile()) setTab('files'); }
     else await reconcileCurrent();
+    if (askedDiff) await openDiff(askedDiff.seq, askedDiff.path);
   } catch (e) {
     if (lostAccess(e)) openGate(); else showFatal(explain(e));
   }

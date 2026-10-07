@@ -324,6 +324,17 @@ export async function getChange(ctx: Ctx, projectId: string, seq: number) {
   return { ...toChange(row), files };
 }
 
+/** One file as it was before and after change #seq (null on the side where it did not exist). Folders have no content. */
+export async function getChangeFile(ctx: Ctx, projectId: string, seq: number, path: string) {
+  const { rows: [row] } = await ctx.db.query<{ action: 'created' | 'updated' | 'deleted'; before: string | null; after: string | null }>(
+    `SELECT cf.action, cf.before, cf.after FROM changes c JOIN change_files cf ON cf.change_id = c.id
+     WHERE c.project_id = $1 AND c.seq = $2 AND cf.path = $3 AND cf.kind = 'file'`,
+    [projectId, seq, normalizePath(path)],
+  );
+  if (!row) throw notFound('That change did not touch this file');
+  return { path: normalizePath(path), action: row.action, before: row.before, after: row.after };
+}
+
 /**
  * Restores the project to how it was right after change #seq. History is never rewritten: the difference between
  * now and then is recorded as a NEW change (kind "rollback"), so a rollback can itself be rolled back.

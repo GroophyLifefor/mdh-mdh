@@ -90,6 +90,12 @@ export function fileRoutes(ctx: Ctx) {
     res.json({ change: await files.getChange(ctx, project.id, seqParam(req.params.seq)) });
   });
 
+  // a file before and after one change (for the diff view); one file at a time keeps the answer small
+  r.get('/history/:seq/file', async (req, res) => {
+    const { project } = await authorize(ctx, req, id(req), 'read');
+    res.json({ file: await files.getChangeFile(ctx, project.id, seqParam(req.params.seq), queryPath(req.query.path)) });
+  });
+
   r.post('/history/:seq/rollback', async (req, res) => {
     const { project, access } = await authorize(ctx, req, id(req), 'write');
     res.json({ change: await files.rollback(ctx, project.id, access.actor, access.level, seqParam(req.params.seq), project.rollback_policy) });

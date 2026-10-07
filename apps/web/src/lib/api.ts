@@ -1,5 +1,5 @@
 import type {
-  Access, ChangeDetail, ChangeInfo, Mode, Policy, ProjectInfo, SaveResult, TreeNode, UploadResult, User,
+  Access, ChangeDetail, ChangeFile, ChangeInfo, Mode, Policy, ProjectInfo, SaveResult, TreeNode, UploadResult, User,
 } from './types';
 
 /** An answer the server gave that was not a success, or no answer at all (status 0). */
@@ -78,5 +78,7 @@ export const files = {
   upload: (id: string, body: { files: { path: string; content: string }[]; folders?: string[]; overwrite?: boolean }) => request<UploadResult>('POST', `${p(id)}/upload`, body),
   history: (id: string, opts: { limit?: number; before?: number } = {}) => request<{ changes: ChangeInfo[]; nextBefore: number | null }>('GET', `${p(id)}/history${q(opts)}`),
   change: (id: string, seq: number) => request<{ change: ChangeDetail }>('GET', `${p(id)}/history/${seq}`).then((r) => r.change),
+  /** A file as it was before and after one change (null on the side where it did not exist). */
+  changeFile: (id: string, seq: number, path: string) => request<{ file: ChangeFile }>('GET', `${p(id)}/history/${seq}/file${q({ path })}`).then((r) => r.file),
   rollback: (id: string, seq: number) => request<{ change: { seq: number } }>('POST', `${p(id)}/history/${seq}/rollback`, {}),
 };
