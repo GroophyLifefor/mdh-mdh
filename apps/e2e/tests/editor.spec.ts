@@ -94,6 +94,10 @@ test.describe('editing', () => {
     await page.getByRole('button', { name: 'Preview', exact: true }).click();
     await expect(page.locator('#cm')).toBeHidden();
     await expect(page.locator('#preview')).toBeVisible();
+    await page.reload();
+    await expect(page.locator('#bar .name')).toHaveText('readme.md');   // the file is open again
+    await expect(page.locator('#cm')).toBeHidden();                     // Preview was remembered, the page does not drop back to Split
+    await expect(page.locator('#preview')).toBeVisible();
     await page.getByRole('button', { name: 'Split', exact: true }).click();
     await expect(page.locator('#cm')).toBeVisible();
     await expect(page.locator('#preview')).toBeVisible();

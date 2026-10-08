@@ -45,7 +45,9 @@ let saveState: SaveState = 'idle';
 let closed = new Set<string>();       // collapsed folders (everything else is open)
 let selDir = '';                      // folder that new files/folders go into
 let editing: { kind: 'create-file' | 'create-folder' | 'rename'; at: string } | null = null;
+const MKEY = 'mdh_mode';
 let mdMode: 'edit' | 'split' | 'preview' = 'split';
+try { const v = localStorage.getItem(MKEY); if (v === 'edit' || v === 'split' || v === 'preview') mdMode = v; } catch { /* default */ }
 let history: ChangeInfo[] = [];
 let nextBefore: number | null = null;
 let selSeq: number | null = null;
@@ -642,7 +644,7 @@ function renderBar() {
       const b = document.createElement('button');
       b.textContent = m[0]!.toUpperCase() + m.slice(1);
       b.className = m === effectiveMode() ? 'on' : '';
-      b.onclick = () => { mdMode = m; applyMode(); renderBar(); };
+      b.onclick = () => { mdMode = m; try { localStorage.setItem(MKEY, m); } catch { /* ignore */ }; applyMode(); renderBar(); };
       grp.appendChild(b);
     }
     bar.appendChild(grp);
